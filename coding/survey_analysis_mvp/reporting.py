@@ -5,7 +5,8 @@ import base64
 import os
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
-from xhtml2pdf import pisa
+from weasyprint import HTML, CSS
+from pathlib import Path
 from wordcloud import WordCloud
 import warnings
 
@@ -14,6 +15,51 @@ from typing import Optional
 
 # フォントファイルのパス (プロジェクト同梱フォント)
 FONT_PATH = os.path.join(os.path.dirname(__file__), "fonts", "NotoSansJP-Regular.otf")
+
+# CSS used for PDF generation
+REPORT_CSS = """
+@font-face {
+    font-family: 'NotoSansJP';
+    src: url('{font_path}');
+}
+body {
+    font-family: 'NotoSansJP', sans-serif;
+    line-height: 1.6;
+    color: #333;
+}
+h1, h2 {
+    color: #2c3e50;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+}
+.container {
+    padding: 20px;
+}
+.chart-container {
+    text-align: center;
+    margin: 30px 0;
+    page-break-inside: avoid;
+}
+.chart-container img {
+    max-width: 90%;
+    height: auto;
+}
+.table-container {
+    margin-top: 20px;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+th {
+    background-color: #f2f2f2;
+}
+"""
 
 
 def find_japanese_font() -> Optional[str]:
@@ -50,7 +96,7 @@ def find_japanese_font() -> Optional[str]:
             continue
 
     if found_ttc:
-        warnings.warn("Only .ttc fonts were found. These may not work with xhtml2pdf.")
+        warnings.warn("Only .ttc fonts were found. These may not work with some PDF libraries.")
 
     return None
 
@@ -179,27 +225,19 @@ def generate_pdf_report(summary_data: dict, output_path: str):
 
     env = Environment(loader=FileSystemLoader('.'))
     template = env.get_template('report_template.html')
+    font_uri = Path(AVAILABLE_FONT_PATH).resolve().as_uri() if AVAILABLE_FONT_PATH else ""
     html_out = template.render(
         sentiment_chart_base64=sentiment_chart,
         topics_chart_base64=topics_chart,
         moderation_chart_base64=moderation_chart,
         emotion_chart_base64=emotion_chart,
         topic_table=summary_data.get('topic_counts', pd.Series()).to_frame().to_html(header=False),
-        font_path=AVAILABLE_FONT_PATH or ""  # xhtml2pdf用に絶対パスを渡す
+        font_path=font_uri
     )
 
-    with open(output_path, "w+b") as result_file:
-        pisa_status = pisa.CreatePDF(
-            src=html_out,
-            dest=result_file,
-            encoding='utf-8'
-        )
-
-    if not pisa_status.err:
-        print(f"PDFレポートが '{output_path}' として生成されました。")
-    else:
-        print(f"PDFの生成中にエラーが発生しました: {pisa_status.err}")
-        raise IOError("PDF生成に失敗しました。")
+    css = REPORT_CSS.format(font_path=font_uri)
+    HTML(string=html_out, base_url='.').write_pdf(output_path, stylesheets=[CSS(string=css)])
+    print(f"PDFレポートが '{output_path}' として生成されました。")
 
 def generate_wordcloud(words: list, output_path: str):
     """単語リストからワードクラウド画像を生成・保存する"""
