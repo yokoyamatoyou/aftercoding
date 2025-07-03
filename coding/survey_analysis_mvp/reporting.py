@@ -210,6 +210,8 @@ def create_emotion_radar_chart_base64(emotion_avg: dict) -> str:
 
 def generate_pdf_report(summary_data: dict, output_path: str):
     """集計データからPDFレポートを生成する"""
+    if not os.path.exists(FONT_PATH):
+        raise FileNotFoundError("Required font file not found: {}. Please download NotoSansJP-Regular.otf and place it in the fonts directory before generating PDFs.".format(FONT_PATH))
     sentiment_chart = create_sentiment_pie_chart_base64(
         summary_data.get('sentiment_counts', pd.Series())
     )
