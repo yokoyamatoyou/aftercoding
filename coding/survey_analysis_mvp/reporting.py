@@ -5,7 +5,7 @@ import base64
 import os
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
-from weasyprint import HTML, CSS
+from fpdf import FPDF
 from pathlib import Path
 from wordcloud import WordCloud
 import warnings
@@ -16,50 +16,7 @@ from typing import Optional
 # フォントファイルのパス (プロジェクト同梱フォント)
 FONT_PATH = os.path.join(os.path.dirname(__file__), "fonts", "NotoSansJP-Regular.otf")
 
-# CSS used for PDF generation
-REPORT_CSS = """
-@font-face {
-    font-family: 'NotoSansJP';
-    src: url('{font_path}');
-}
-body {
-    font-family: 'NotoSansJP', sans-serif;
-    line-height: 1.6;
-    color: #333;
-}
-h1, h2 {
-    color: #2c3e50;
-    border-bottom: 2px solid #3498db;
-    padding-bottom: 10px;
-}
-.container {
-    padding: 20px;
-}
-.chart-container {
-    text-align: center;
-    margin: 30px 0;
-    page-break-inside: avoid;
-}
-.chart-container img {
-    max-width: 90%;
-    height: auto;
-}
-.table-container {
-    margin-top: 20px;
-}
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-th, td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-}
-th {
-    background-color: #f2f2f2;
-}
-"""
+
 
 
 def find_japanese_font() -> Optional[str]:
@@ -237,8 +194,13 @@ def generate_pdf_report(summary_data: dict, output_path: str):
         font_path=font_uri
     )
 
-    css = REPORT_CSS.format(font_path=font_uri)
-    HTML(string=html_out, base_url='.').write_pdf(output_path, stylesheets=[CSS(string=css)])
+    pdf = FPDF()
+    pdf.add_page()
+    if AVAILABLE_FONT_PATH:
+        pdf.add_font('NotoSansJP', '', AVAILABLE_FONT_PATH, uni=True)
+        pdf.set_font('NotoSansJP', '', 12)
+    pdf.write_html(html_out)
+    pdf.output(output_path)
     print(f"PDFレポートが '{output_path}' として生成されました。")
 
 def generate_wordcloud(words: list, output_path: str):
