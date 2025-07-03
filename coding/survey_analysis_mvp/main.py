@@ -13,6 +13,20 @@ from analysis import analyze_dataframe, summarize_results
 from reporting import generate_pdf_report, generate_wordcloud
 from config import settings
 
+def expand_key_topic_columns(df: pd.DataFrame, column: str = "analysis_key_topics") -> pd.DataFrame:
+    """Convert list-based key topics column into separate columns."""
+    if column not in df.columns:
+        return df
+    topics_expanded = (
+        df[column]
+        .apply(lambda x: x if isinstance(x, list) else [])
+        .apply(pd.Series)
+    )
+    if topics_expanded.empty:
+        return df.drop(columns=[column])
+    topics_expanded.columns = [f"{column}_{i+1}" for i in range(len(topics_expanded.columns))]
+    return pd.concat([df.drop(columns=[column]), topics_expanded], axis=1)
+
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -142,7 +156,8 @@ class App(ctk.CTk):
         path = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel files", "*.xlsx")])
         if path:
             try:
-                self.df_analyzed.to_excel(path, index=False)
+                df_to_save = expand_key_topic_columns(self.df_analyzed)
+                df_to_save.to_excel(path, index=False)
                 messagebox.showinfo("成功", f"分析結果を {path} に保存しました。")
             except Exception as e:
                 messagebox.showerror("保存エラー", f"Excelファイルの保存に失敗しました:\n{e}")

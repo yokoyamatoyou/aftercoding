@@ -11,16 +11,21 @@ from wordcloud import WordCloud
 import math
 
 # フォントファイルのパス
-# Windowsのデフォルトフォント（メイリオ）を使用
-FONT_PATH = "C:\\Windows\\Fonts\\meiryo.ttc" # メイリオ Regularのパス
+# プロジェクト同梱のNoto Sans JPを使用
+FONT_PATH = os.path.join(os.path.dirname(__file__), "fonts", "NotoSansJP-Regular.otf")
 
 def set_japanese_font():
     """matplotlibに日本語フォントを設定する"""
-    # matplotlibはフォント名を指定するだけでシステムフォントを認識できることが多い
-    mpl.rcParams['font.family'] = 'Meiryo'
-    mpl.rcParams['font.sans-serif'] = ['Meiryo', 'Yu Gothic', 'Noto Sans CJK JP'] # フォールバックも設定
-    mpl.rcParams['axes.unicode_minus'] = False # マイナス記号の表示
-    return True # フォントファイルが存在しなくてもエラーにしない
+    try:
+        mpl.font_manager.fontManager.addfont(FONT_PATH)
+        font_name = mpl.font_manager.FontProperties(fname=FONT_PATH).get_name()
+        mpl.rcParams['font.family'] = font_name
+        mpl.rcParams['font.sans-serif'] = [font_name]
+    except Exception:
+        # フォントが読み込めなくても処理を続行する
+        pass
+    mpl.rcParams['axes.unicode_minus'] = False
+    return True
 
 
 def create_sentiment_pie_chart_base64(sentiment_counts: pd.Series) -> str:
