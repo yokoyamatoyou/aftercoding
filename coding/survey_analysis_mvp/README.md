@@ -18,7 +18,10 @@
 
 ### ステップ1: フォントの準備
 
-このアプリケーションは、Windowsに標準でインストールされている日本語フォント（メイリオなど）を使用します。特別なフォントの準備は不要です。
+PDFやグラフで日本語を正しく表示するため、`fonts` フォルダに
+`NotoSansJP-Regular.otf` を配置します。フォントは
+[Google Fonts](https://fonts.google.com/noto/specimen/Noto+Sans+JP)
+からダウンロードできます。
 
 ### ステップ2: APIキーの設定
 
