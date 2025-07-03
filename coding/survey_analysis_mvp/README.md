@@ -19,8 +19,8 @@
 ### ステップ1: フォントの準備
 
 PDFやグラフで日本語を正しく表示するため、事前に日本語フォントを準備します。
-`fonts` フォルダに **TTF/OTF 形式** の `NotoSansJP-Regular.otf` を置くことを推奨します。
-**重要**: PDFレポート生成前にこのファイルが存在しないとエラーになります。必ず配置してください。
+`fonts` フォルダには **TTF 形式** の `NotoSansJP-Regular.ttf` を配置してください。
+**重要**: OTF 形式は `fpdf2` でサポートされずエラーになります。必ず TTF 版を用意してください。
 Windows の既存フォント (Meiryo など) も利用できます。PDF生成には `fpdf2` を使用しており、`.ttc` 形式のフォントも利用可能です。
 Noto Sans JP は [Google Fonts](https://fonts.google.com/noto/specimen/Noto+Sans+JP) から入手できます。
 
