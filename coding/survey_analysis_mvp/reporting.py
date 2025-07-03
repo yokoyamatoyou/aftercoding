@@ -7,6 +7,7 @@ import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 from xhtml2pdf import pisa
 from wordcloud import WordCloud
+import warnings
 
 import math
 from typing import Optional
@@ -25,18 +26,31 @@ def find_japanese_font() -> Optional[str]:
         os.path.join(os.getenv("WINDIR", "C:\\Windows"), "Fonts", "YuGothM.ttc"),
     ]
 
+    found_ttc = False
     for path in candidates:
-        if os.path.exists(path) and os.path.splitext(path)[1].lower() in (".ttf", ".otf"):
+        if not os.path.exists(path):
+            continue
+        ext = os.path.splitext(path)[1].lower()
+        if ext in (".ttf", ".otf"):
             return path
+        if ext == ".ttc":
+            found_ttc = True
 
     # matplotlib経由で検索
     for name in ["MS Gothic", "Meiryo", "Yu Gothic", "Noto Sans CJK JP"]:
         try:
             path = mpl.font_manager.findfont(name)
             if os.path.exists(path):
-                return path
+                ext = os.path.splitext(path)[1].lower()
+                if ext in (".ttf", ".otf"):
+                    return path
+                if ext == ".ttc":
+                    found_ttc = True
         except Exception:
             continue
+
+    if found_ttc:
+        warnings.warn("Only .ttc fonts were found. These may not work with xhtml2pdf.")
 
     return None
 
