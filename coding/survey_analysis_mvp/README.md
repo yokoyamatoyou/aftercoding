@@ -20,6 +20,7 @@
 
 PDFやグラフで日本語を正しく表示するため、事前に日本語フォントを準備します。
 `fonts` フォルダに **TTF/OTF 形式** の `NotoSansJP-Regular.otf` を置くことを推奨します。
+**重要**: PDFレポート生成前にこのファイルが存在しないとエラーになります。必ず配置してください。
 Windows の既存フォント (Meiryo など) も利用できます。PDF生成には `WeasyPrint` を使用しており、`.ttc` 形式のフォントも利用可能です。
 Noto Sans JP は [Google Fonts](https://fonts.google.com/noto/specimen/Noto+Sans+JP) から入手できます。
 
@@ -74,6 +75,8 @@ python main.py
 
 - **グラフやPDFの日本語が四角（豆腐）になる:**
   - Windowsの日本語フォントが利用できないか、`fonts`フォルダにフォントが配置されていない可能性があります。必要に応じて`NotoSansJP-Regular.otf`を配置してください。
+- **PDF生成でFileNotFoundErrorが出る:**
+  - `fonts/NotoSansJP-Regular.otf` が存在するか確認してください。
 
 - **アプリケーションが起動しない:**
   - 「ステップ3: 必要なライブラリのインストール」が正しく完了しているか確認してください。再度 `pip install -r requirements.txt` を実行してみてください。
