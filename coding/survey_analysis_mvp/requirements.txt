@@ -2,7 +2,7 @@ pandas
 openpyxl
 customtkinter
 wordcloud
-xhtml2pdf
+weasyprint
 matplotlib
 jinja2
 spacy
