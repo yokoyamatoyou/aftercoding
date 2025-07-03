@@ -5,10 +5,17 @@ import base64
 import os
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
-from fpdf import FPDF, HTMLMixin
+from fpdf import FPDF, HTMLMixin, __version__ as fpdf_version
+from packaging import version
 from pathlib import Path
 from wordcloud import WordCloud
 import warnings
+
+if version.parse(fpdf_version).major < 2:
+    raise ImportError(
+        f"fpdf2>=2 is required but version {fpdf_version} was found.\n"
+        "Please uninstall the old 'fpdf' package and install 'fpdf2'."
+    )
 
 
 class PDF(FPDF, HTMLMixin):

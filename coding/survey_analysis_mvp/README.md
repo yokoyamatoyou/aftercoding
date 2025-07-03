@@ -41,6 +41,15 @@ Noto Sans JP は [Google Fonts](https://fonts.google.com/noto/specimen/Noto+Sans
 pip install -r requirements.txt
 ```
 
+> **補足:** もし `HTML2PDF object has no attribute 'unescape'` というエラーが表示される場合は、
+> 古い `fpdf` パッケージがインストールされている可能性があります。次のコマンドで削除してから
+> `fpdf2` を再インストールしてください。
+>
+> ```bash
+> pip uninstall fpdf
+> pip install --upgrade fpdf2
+> ```
+
 ## 3. アプリケーションの起動方法
 
 ターミナルで以下のコマンドを実行します。
