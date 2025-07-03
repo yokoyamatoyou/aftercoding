@@ -13,8 +13,11 @@ import warnings
 import math
 from typing import Optional
 
-# フォントファイルのパス (プロジェクト同梱フォント)
-FONT_PATH = os.path.join(os.path.dirname(__file__), "fonts", "NotoSansJP-Regular.otf")
+# フォントファイルのパス (TTF を優先)
+FONT_DIR = os.path.join(os.path.dirname(__file__), "fonts")
+FONT_PATH_TTF = os.path.join(FONT_DIR, "NotoSansJP-Regular.ttf")
+FONT_PATH_OTF = os.path.join(FONT_DIR, "NotoSansJP-Regular.otf")
+FONT_PATH = FONT_PATH_TTF if os.path.exists(FONT_PATH_TTF) else FONT_PATH_OTF
 
 
 
@@ -168,7 +171,9 @@ def create_emotion_radar_chart_base64(emotion_avg: dict) -> str:
 def generate_pdf_report(summary_data: dict, output_path: str):
     """集計データからPDFレポートを生成する"""
     if not os.path.exists(FONT_PATH):
-        raise FileNotFoundError("Required font file not found: {}. Please download NotoSansJP-Regular.otf and place it in the fonts directory before generating PDFs.".format(FONT_PATH))
+        raise FileNotFoundError(
+            f"Required font file not found: {FONT_PATH}. Please place NotoSansJP-Regular.ttf in the fonts directory before generating PDFs."
+        )
     sentiment_chart = create_sentiment_pie_chart_base64(
         summary_data.get('sentiment_counts', pd.Series())
     )
