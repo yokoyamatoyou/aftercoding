@@ -19,9 +19,10 @@
 ### ステップ1: フォントの準備
 
 PDFやグラフで日本語を正しく表示するため、事前に日本語フォントを準備します。
-`fonts` フォルダに `NotoSansJP-Regular.otf` を置くか、Windows 環境であれば
-インストール済みの Meiryo や MS ゴシックなどのフォントを自動的に利用します。
-Noto Sans JP は [Google Fonts](https://fonts.google.com/noto/specimen/Noto+Sans+JP)
+`fonts` フォルダに **TTF/OTF 形式** の `NotoSansJP-Regular.otf` を置くことを推奨します。
+Windows の既存フォント (Meiryo など) も利用できますが、これらは `.ttc` 形式で
+あるため `xhtml2pdf` では読み込めず、PDF作成時に "Can't open file" エラーが発生
+する場合があります。Noto Sans JP は [Google Fonts](https://fonts.google.com/noto/specimen/Noto+Sans+JP)
 から入手できます。
 
 ### ステップ2: APIキーの設定

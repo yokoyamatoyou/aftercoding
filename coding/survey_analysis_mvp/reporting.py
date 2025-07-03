@@ -26,7 +26,7 @@ def find_japanese_font() -> Optional[str]:
     ]
 
     for path in candidates:
-        if os.path.exists(path):
+        if os.path.exists(path) and os.path.splitext(path)[1].lower() in (".ttf", ".otf"):
             return path
 
     # matplotlib経由で検索
