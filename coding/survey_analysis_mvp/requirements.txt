@@ -1,0 +1,15 @@
+pandas
+openpyxl
+customtkinter
+wordcloud
+xhtml2pdf
+matplotlib
+jinja2
+spacy
+sudachipy
+sudachidict_core
+instructor
+pydantic
+openai
+pydantic-settings
+python-dotenv
