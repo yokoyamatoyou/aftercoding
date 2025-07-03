@@ -9,21 +9,55 @@ from xhtml2pdf import pisa
 from wordcloud import WordCloud
 
 import math
+from typing import Optional
 
-# フォントファイルのパス
-# プロジェクト同梱のNoto Sans JPを使用
+# フォントファイルのパス (プロジェクト同梱フォント)
 FONT_PATH = os.path.join(os.path.dirname(__file__), "fonts", "NotoSansJP-Regular.otf")
 
-def set_japanese_font():
+
+def find_japanese_font() -> Optional[str]:
+    """可能な日本語フォントファイルのパスを返す"""
+    candidates = [
+        FONT_PATH,
+        os.path.join(os.getenv("WINDIR", "C:\\Windows"), "Fonts", "meiryo.ttc"),
+        os.path.join(os.getenv("WINDIR", "C:\\Windows"), "Fonts", "msgothic.ttc"),
+        os.path.join(os.getenv("WINDIR", "C:\\Windows"), "Fonts", "YuGothR.ttc"),
+        os.path.join(os.getenv("WINDIR", "C:\\Windows"), "Fonts", "YuGothM.ttc"),
+    ]
+
+    for path in candidates:
+        if os.path.exists(path):
+            return path
+
+    # matplotlib経由で検索
+    for name in ["MS Gothic", "Meiryo", "Yu Gothic", "Noto Sans CJK JP"]:
+        try:
+            path = mpl.font_manager.findfont(name)
+            if os.path.exists(path):
+                return path
+        except Exception:
+            continue
+
+    return None
+
+
+AVAILABLE_FONT_PATH = find_japanese_font()
+
+
+def set_japanese_font() -> bool:
     """matplotlibに日本語フォントを設定する"""
+    if not AVAILABLE_FONT_PATH:
+        mpl.rcParams['axes.unicode_minus'] = False
+        return False
+
     try:
-        mpl.font_manager.fontManager.addfont(FONT_PATH)
-        font_name = mpl.font_manager.FontProperties(fname=FONT_PATH).get_name()
+        mpl.font_manager.fontManager.addfont(AVAILABLE_FONT_PATH)
+        font_name = mpl.font_manager.FontProperties(fname=AVAILABLE_FONT_PATH).get_name()
         mpl.rcParams['font.family'] = font_name
         mpl.rcParams['font.sans-serif'] = [font_name]
     except Exception:
-        # フォントが読み込めなくても処理を続行する
-        pass
+        return False
+
     mpl.rcParams['axes.unicode_minus'] = False
     return True
 
@@ -116,10 +150,18 @@ def create_emotion_radar_chart_base64(emotion_avg: dict) -> str:
 
 def generate_pdf_report(summary_data: dict, output_path: str):
     """集計データからPDFレポートを生成する"""
-    sentiment_chart = create_sentiment_pie_chart_base64(summary_data.get('sentiment_counts', pd.Series()))
-    topics_chart = create_topics_bar_chart_base64(summary_data.get('topic_counts', pd.Series()))
-    moderation_chart = create_moderation_bar_chart_base64(summary_data.get('moderation_summary', {}))
-    emotion_chart = create_emotion_radar_chart_base64(summary_data.get('emotion_avg', {}))
+    sentiment_chart = create_sentiment_pie_chart_base64(
+        summary_data.get('sentiment_counts', pd.Series())
+    )
+    topics_chart = create_topics_bar_chart_base64(
+        summary_data.get('topic_counts', pd.Series())
+    )
+    moderation_chart = create_moderation_bar_chart_base64(
+        summary_data.get('moderation_summary', {})
+    )
+    emotion_chart = create_emotion_radar_chart_base64(
+        summary_data.get('emotion_avg', {})
+    )
 
     env = Environment(loader=FileSystemLoader('.'))
     template = env.get_template('report_template.html')
@@ -129,7 +171,7 @@ def generate_pdf_report(summary_data: dict, output_path: str):
         moderation_chart_base64=moderation_chart,
         emotion_chart_base64=emotion_chart,
         topic_table=summary_data.get('topic_counts', pd.Series()).to_frame().to_html(header=False),
-        font_path=FONT_PATH # xhtml2pdf用に絶対パスを渡す
+        font_path=AVAILABLE_FONT_PATH or ""  # xhtml2pdf用に絶対パスを渡す
     )
 
     with open(output_path, "w+b") as result_file:
@@ -151,14 +193,16 @@ def generate_wordcloud(words: list, output_path: str):
         print("ワードクラウドを生成するための単語がありません。")
         return
     
-    if not os.path.exists(FONT_PATH):
-        raise FileNotFoundError(f"フォントファイルが見つかりません: {FONT_PATH}")
+    font_path = AVAILABLE_FONT_PATH
+    if not font_path:
+        print("日本語フォントが見つからないため、ワードクラウドを生成できません。")
+        return
 
     wordcloud = WordCloud(
         width=800, 
         height=400, 
-        background_color='white', 
-        font_path=FONT_PATH,
+        background_color='white',
+        font_path=font_path,
         collocations=False # 単語のペアを考慮しない
     ).generate(' '.join(words))
 

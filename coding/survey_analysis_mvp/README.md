@@ -18,10 +18,11 @@
 
 ### ステップ1: フォントの準備
 
-PDFやグラフで日本語を正しく表示するため、`fonts` フォルダに
-`NotoSansJP-Regular.otf` を配置します。フォントは
-[Google Fonts](https://fonts.google.com/noto/specimen/Noto+Sans+JP)
-からダウンロードできます。
+PDFやグラフで日本語を正しく表示するため、事前に日本語フォントを準備します。
+`fonts` フォルダに `NotoSansJP-Regular.otf` を置くか、Windows 環境であれば
+インストール済みの Meiryo や MS ゴシックなどのフォントを自動的に利用します。
+Noto Sans JP は [Google Fonts](https://fonts.google.com/noto/specimen/Noto+Sans+JP)
+から入手できます。
 
 ### ステップ2: APIキーの設定
 
@@ -73,7 +74,7 @@ python main.py
   - OpenAIのAPI残高が不足していないか確認してください。
 
 - **グラフやPDFの日本語が四角（豆腐）になる:**
-  - 「2. セットアップ」の「ステップ1: フォントの準備」が正しく完了しているか確認してください。`fonts`フォルダに`NotoSansJP-Regular.otf`が存在する必要があります。
+  - Windowsの日本語フォントが利用できないか、`fonts`フォルダにフォントが配置されていない可能性があります。必要に応じて`NotoSansJP-Regular.otf`を配置してください。
 
 - **アプリケーションが起動しない:**
   - 「ステップ3: 必要なライブラリのインストール」が正しく完了しているか確認してください。再度 `pip install -r requirements.txt` を実行してみてください。
