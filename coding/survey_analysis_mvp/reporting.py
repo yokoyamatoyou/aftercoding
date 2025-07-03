@@ -11,21 +11,39 @@ from wordcloud import WordCloud
 import math
 
 # フォントファイルのパス
-# プロジェクト同梱のNoto Sans JPを使用
+# プロジェクト同梱のNoto Sans JP を優先し、なければシステムフォントを使用
 FONT_PATH = os.path.join(os.path.dirname(__file__), "fonts", "NotoSansJP-Regular.otf")
+WINDOWS_FONTS = [
+    os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "Fonts", "meiryo.ttc"),
+    os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "Fonts", "msgothic.ttc"),
+]
 
-def set_japanese_font():
+
+def get_font_path() -> str | None:
+    """Return an available font path for Japanese text."""
+    if os.path.exists(FONT_PATH):
+        return FONT_PATH
+    for path in WINDOWS_FONTS:
+        if os.path.exists(path):
+            return path
+    return None
+
+def set_japanese_font() -> bool:
     """matplotlibに日本語フォントを設定する"""
-    try:
-        mpl.font_manager.fontManager.addfont(FONT_PATH)
-        font_name = mpl.font_manager.FontProperties(fname=FONT_PATH).get_name()
-        mpl.rcParams['font.family'] = font_name
-        mpl.rcParams['font.sans-serif'] = [font_name]
-    except Exception:
-        # フォントが読み込めなくても処理を続行する
-        pass
-    mpl.rcParams['axes.unicode_minus'] = False
-    return True
+    font_path = get_font_path()
+    if font_path:
+        try:
+            mpl.font_manager.fontManager.addfont(font_path)
+            font_name = mpl.font_manager.FontProperties(fname=font_path).get_name()
+        except Exception:
+            font_name = "Meiryo"
+    else:
+        font_name = "Meiryo"
+
+    mpl.rcParams["font.family"] = font_name
+    mpl.rcParams["font.sans-serif"] = [font_name]
+    mpl.rcParams["axes.unicode_minus"] = False
+    return bool(font_path)
 
 
 def create_sentiment_pie_chart_base64(sentiment_counts: pd.Series) -> str:
@@ -123,13 +141,14 @@ def generate_pdf_report(summary_data: dict, output_path: str):
 
     env = Environment(loader=FileSystemLoader('.'))
     template = env.get_template('report_template.html')
+    font_path = get_font_path()
     html_out = template.render(
         sentiment_chart_base64=sentiment_chart,
         topics_chart_base64=topics_chart,
         moderation_chart_base64=moderation_chart,
         emotion_chart_base64=emotion_chart,
         topic_table=summary_data.get('topic_counts', pd.Series()).to_frame().to_html(header=False),
-        font_path=FONT_PATH # xhtml2pdf用に絶対パスを渡す
+        font_path=font_path or ""
     )
 
     with open(output_path, "w+b") as result_file:
@@ -151,15 +170,16 @@ def generate_wordcloud(words: list, output_path: str):
         print("ワードクラウドを生成するための単語がありません。")
         return
     
-    if not os.path.exists(FONT_PATH):
-        raise FileNotFoundError(f"フォントファイルが見つかりません: {FONT_PATH}")
+    font_path = get_font_path()
+    if not font_path:
+        print(f"警告: フォントファイルが見つかりません。日本語の表示が崩れる可能性があります。")
 
     wordcloud = WordCloud(
-        width=800, 
-        height=400, 
-        background_color='white', 
-        font_path=FONT_PATH,
-        collocations=False # 単語のペアを考慮しない
+        width=800,
+        height=400,
+        background_color='white',
+        font_path=font_path,
+        collocations=False
     ).generate(' '.join(words))
 
     wordcloud.to_file(output_path)
