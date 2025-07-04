@@ -1,3 +1,10 @@
+"""Survey analysis utilities using OpenAI and spaCy.
+
+This module defines Pydantic models for the analysis results and provides
+helper functions to run asynchronous text analysis and aggregate the outputs
+for reporting.
+"""
+
 import pandas as pd
 import asyncio
 from typing import List, Literal
@@ -10,17 +17,28 @@ import spacy
 from config import settings
 
 # InstructorでOpenAIクライアントを初期化
-aclient = instructor.from_openai(AsyncOpenAI(api_key=settings.OPENAI_API_KEY), mode=instructor.Mode.MD_JSON)
+aclient = instructor.from_openai(
+    AsyncOpenAI(api_key=settings.OPENAI_API_KEY), mode=instructor.Mode.MD_JSON
+)
+
 
 # --- データモデル定義 ---
 class SurveyResponseAnalysis(BaseModel):
-    """単一のアンケート自由回答を分析し、構造化されたインサイトを抽出するためのモデル。"""
-    sentiment: Literal['positive', 'negative', 'neutral', 'mixed'] = Field(
+    """Structured insight extracted from a single survey response.
+
+    Attributes:
+        sentiment: Overall sentiment classified into four categories.
+        key_topics: List of key topics mentioned in the response.
+        verbatim_quote: Representative sentence from the original text.
+        actionable_insight: Whether the response includes actionable feedback.
+    """
+
+    sentiment: Literal["positive", "negative", "neutral", "mixed"] = Field(
         description="回答全体のセンチメント（感情極性）を4つのカテゴリのいずれかで判定します。"
     )
     key_topics: List[str] = Field(
         description="回答で言及されている主要なトピックやテーマをリスト形式で抽出します。例：['価格', 'デザイン', 'サポート体制']",
-        default=[]
+        default=[],
     )
     verbatim_quote: str = Field(
         description="分析内容を最もよく表している、原文からの代表的な一文を抜き出します。"
@@ -29,7 +47,10 @@ class SurveyResponseAnalysis(BaseModel):
         description="この回答に、改善に繋がる具体的で実行可能な提案が含まれている場合はTrue、そうでなければFalseを返します。"
     )
 
+
 class ModerationCategories(BaseModel):
+    """Flags indicating whether each moderation category was triggered."""
+
     hate: bool = Field(description="ヘイトコンテンツ")
     hate_threatening: bool = Field(description="脅迫的なヘイトコンテンツ")
     self_harm: bool = Field(description="自傷行為")
@@ -38,7 +59,10 @@ class ModerationCategories(BaseModel):
     violence: bool = Field(description="暴力")
     violence_graphic: bool = Field(description="グラフィックな暴力コンテンツ")
 
+
 class ModerationScores(BaseModel):
+    """Score values for each moderation category."""
+
     hate: float = Field(description="ヘイトスコア")
     hate_threatening: float = Field(description="脅迫的なヘイトスコア")
     self_harm: float = Field(description="自傷行為スコア")
@@ -47,12 +71,18 @@ class ModerationScores(BaseModel):
     violence: float = Field(description="暴力スコア")
     violence_graphic: float = Field(description="グラフィックな暴力スコア")
 
+
 class ModerationResult(BaseModel):
+    """Moderation outcome returned by the OpenAI API."""
+
     flagged: bool = Field(description="フラグが立てられたか")
     categories: ModerationCategories
     category_scores: ModerationScores
 
+
 class EmotionScores(BaseModel):
+    """Primary emotion scores for a text."""
+
     joy: float = Field(description="喜びのスコア (0-5)")
     sadness: float = Field(description="悲しみのスコア (0-5)")
     fear: float = Field(description="恐れのスコア (0-5)")
@@ -61,45 +91,91 @@ class EmotionScores(BaseModel):
     disgust: float = Field(description="嫌悪のスコア (0-5)")
     reason: str = Field(description="感情全体の理由")
 
+
 class ComprehensiveAnalysisResult(BaseModel):
+    """Combined results from survey, moderation and emotion analyses."""
+
     survey_analysis: SurveyResponseAnalysis
     moderation_result: ModerationResult
     emotion_scores: EmotionScores
 
+
 # --- spaCy日本語トークナイザ ---
-def get_tokenizer(mode: str = 'B'):
-    """指定されたモードでSudachiPyトークナイザを持つspaCyパイプラインを返す"""
+def get_tokenizer(mode: str = "B"):
+    """Return a spaCy pipeline with SudachiPy tokenizer.
+
+    Args:
+        mode: SudachiPy split mode ("A", "B", or "C").
+
+    Returns:
+        spaCy Language object with the specified tokenizer.
+    """
     config = {
         "nlp": {
             "tokenizer": {
                 "@tokenizers": "spacy.ja.JapaneseTokenizer",
-                "split_mode": mode
+                "split_mode": mode,
             }
         }
     }
     return spacy.blank("ja", config=config)
 
+
 # --- コア分析関数 ---
-async def analyze_single_text(text: str, mode: str = 'B') -> ComprehensiveAnalysisResult:
-    """単一のテキストを非同期で分析し、包括的な結果を返す"""
+async def analyze_single_text(
+    text: str, mode: str = "B"
+) -> ComprehensiveAnalysisResult:
+    """Analyze a single text asynchronously.
+
+    Args:
+        text: Text to analyze.
+        mode: SudachiPy split mode to use for tokenization.
+
+    Returns:
+        ComprehensiveAnalysisResult containing structured analysis data.
+    """
     if not isinstance(text, str) or not text.strip():
         # 空または無効なテキストの場合、デフォルト値を返す
         default_survey_analysis = SurveyResponseAnalysis(
-            sentiment='neutral', 
-            key_topics=['無回答'], 
-            verbatim_quote='N/A', 
-            actionable_insight=False
+            sentiment="neutral",
+            key_topics=["無回答"],
+            verbatim_quote="N/A",
+            actionable_insight=False,
         )
         default_moderation_result = ModerationResult(
             flagged=False,
-            categories=ModerationCategories(hate=False, hate_threatening=False, self_harm=False, sexual=False, sexual_minors=False, violence=False, violence_graphic=False),
-            category_scores=ModerationScores(hate=0.0, hate_threatening=0.0, self_harm=0.0, sexual=0.0, sexual_minors=0.0, violence=0.0, violence_graphic=0.0)
+            categories=ModerationCategories(
+                hate=False,
+                hate_threatening=False,
+                self_harm=False,
+                sexual=False,
+                sexual_minors=False,
+                violence=False,
+                violence_graphic=False,
+            ),
+            category_scores=ModerationScores(
+                hate=0.0,
+                hate_threatening=0.0,
+                self_harm=0.0,
+                sexual=0.0,
+                sexual_minors=0.0,
+                violence=0.0,
+                violence_graphic=0.0,
+            ),
         )
-        default_emotion_scores = EmotionScores(joy=0.0, sadness=0.0, fear=0.0, surprise=0.0, anger=0.0, disgust=0.0, reason='N/A')
+        default_emotion_scores = EmotionScores(
+            joy=0.0,
+            sadness=0.0,
+            fear=0.0,
+            surprise=0.0,
+            anger=0.0,
+            disgust=0.0,
+            reason="N/A",
+        )
         return ComprehensiveAnalysisResult(
             survey_analysis=default_survey_analysis,
             moderation_result=default_moderation_result,
-            emotion_scores=default_emotion_scores
+            emotion_scores=default_emotion_scores,
         )
 
     nlp = get_tokenizer(mode)
@@ -110,7 +186,10 @@ async def analyze_single_text(text: str, mode: str = 'B') -> ComprehensiveAnalys
         model="gpt-4o-mini",
         response_model=SurveyResponseAnalysis,
         messages=[
-            {"role": "system", "content": "あなたは優秀なマーケティングアナリストです。提供されたアンケートの回答を分析し、指定された形式で構造化してください。"},
+            {
+                "role": "system",
+                "content": "あなたは優秀なマーケティングアナリストです。提供されたアンケートの回答を分析し、指定された形式で構造化してください。",
+            },
             {"role": "user", "content": tokenized_text},
         ],
         max_retries=2,
@@ -161,56 +240,97 @@ async def analyze_single_text(text: str, mode: str = 'B') -> ComprehensiveAnalys
 
     try:
         survey_analysis, moderation_response, emotion_scores = await asyncio.gather(
-            survey_analysis_task,
-            moderation_task,
-            emotion_task
+            survey_analysis_task, moderation_task, emotion_task
         )
-        moderation_result = moderation_response.results[0] # 最初の結果を使用
+        moderation_result = moderation_response.results[0]  # 最初の結果を使用
 
         return ComprehensiveAnalysisResult(
             survey_analysis=survey_analysis,
             moderation_result=ModerationResult(
                 flagged=moderation_result.flagged,
-                categories=ModerationCategories(**moderation_result.categories.model_dump()),
-                category_scores=ModerationScores(**moderation_result.category_scores.model_dump())
+                categories=ModerationCategories(
+                    **moderation_result.categories.model_dump()
+                ),
+                category_scores=ModerationScores(
+                    **moderation_result.category_scores.model_dump()
+                ),
             ),
-            emotion_scores=emotion_scores
+            emotion_scores=emotion_scores,
         )
     except Exception as e:
         print(f"APIリクエストエラー: {e}")
         # エラー時もデフォルト値を返す
         default_survey_analysis = SurveyResponseAnalysis(
-            sentiment='neutral', 
-            key_topics=['分析エラー'], 
-            verbatim_quote=str(e), 
-            actionable_insight=False
+            sentiment="neutral",
+            key_topics=["分析エラー"],
+            verbatim_quote=str(e),
+            actionable_insight=False,
         )
         default_moderation_result = ModerationResult(
             flagged=True,
-            categories=ModerationCategories(hate=False, hate_threatening=False, self_harm=False, sexual=False, sexual_minors=False, violence=False, violence_graphic=False),
-            category_scores=ModerationScores(hate=0.0, hate_threatening=0.0, self_harm=0.0, sexual=0.0, sexual_minors=0.0, violence=0.0, violence_graphic=0.0)
+            categories=ModerationCategories(
+                hate=False,
+                hate_threatening=False,
+                self_harm=False,
+                sexual=False,
+                sexual_minors=False,
+                violence=False,
+                violence_graphic=False,
+            ),
+            category_scores=ModerationScores(
+                hate=0.0,
+                hate_threatening=0.0,
+                self_harm=0.0,
+                sexual=0.0,
+                sexual_minors=0.0,
+                violence=0.0,
+                violence_graphic=0.0,
+            ),
         )
-        default_emotion_scores = EmotionScores(joy=0.0, sadness=0.0, fear=0.0, surprise=0.0, anger=0.0, disgust=0.0, reason=str(e))
+        default_emotion_scores = EmotionScores(
+            joy=0.0,
+            sadness=0.0,
+            fear=0.0,
+            surprise=0.0,
+            anger=0.0,
+            disgust=0.0,
+            reason=str(e),
+        )
         return ComprehensiveAnalysisResult(
             survey_analysis=default_survey_analysis,
             moderation_result=default_moderation_result,
-            emotion_scores=default_emotion_scores
+            emotion_scores=default_emotion_scores,
         )
 
-async def analyze_dataframe(df: pd.DataFrame, column_name: str, mode: str = 'B', progress_callback=None) -> pd.DataFrame:
-    """DataFrameの指定された列を並列分析し、結果を新しい列として追加する"""
+
+async def analyze_dataframe(
+    df: pd.DataFrame, column_name: str, mode: str = "B", progress_callback=None
+) -> pd.DataFrame:
+    """Analyze a DataFrame column in parallel and append results.
+
+    Args:
+        df: Source DataFrame.
+        column_name: Name of the column containing text responses.
+        mode: SudachiPy split mode.
+        progress_callback: Optional callback receiving progress percentage.
+
+    Returns:
+        DataFrame with analysis results concatenated.
+    """
     texts_to_analyze = df[column_name].tolist()
     tasks = [analyze_single_text(text, mode) for text in texts_to_analyze]
-    
+
     results = []
     # asyncio.as_completedは順不同なので、元のDataFrameのインデックスを保持する
     # ここでは簡単化のため、元のdfのインデックスに結果をマッピングする
     # （ただし、上記の実装では結果の順序が保証されないため、より堅牢な実装が必要）
     # 今回は簡単化のため、結果のリストをそのまま列に追加します。
-    
+
     # 順序を保証するために、タスクと元のインデックスをペアにする
-    indexed_tasks = [(i, analyze_single_text(text, mode)) for i, text in enumerate(texts_to_analyze)]
-    
+    indexed_tasks = [
+        (i, analyze_single_text(text, mode)) for i, text in enumerate(texts_to_analyze)
+    ]
+
     # 完了したタスクから結果を収集し、元のインデックスでソートする
     completed_results = [None] * len(texts_to_analyze)
     for i, (original_index, task) in enumerate(indexed_tasks):
@@ -242,33 +362,53 @@ async def analyze_dataframe(df: pd.DataFrame, column_name: str, mode: str = 'B',
     df.reset_index(drop=True, inplace=True)
     return pd.concat([df, survey_df, moderation_df, emotion_df], axis=1)
 
+
 # --- 集計関数 ---
 def summarize_results(df_analyzed: pd.DataFrame):
-    """分析済みDataFrameからPDFレポートとワードクラウド用のデータを集計する"""
-    if 'analysis_sentiment' not in df_analyzed.columns:
+    """Summarize analyzed DataFrame for reporting.
+
+    Args:
+        df_analyzed: DataFrame returned by :func:`analyze_dataframe`.
+
+    Returns:
+        Tuple of summary dictionary and list of words for word cloud.
+    """
+    if "analysis_sentiment" not in df_analyzed.columns:
         return None, None
 
     # センチメント比率
-    sentiment_counts = df_analyzed['analysis_sentiment'].value_counts()
-    
+    sentiment_counts = (
+        df_analyzed["analysis_sentiment"]
+        .value_counts()
+        .reindex(["positive", "neutral", "negative", "mixed"], fill_value=0)
+    )
+
     # 全トピックのリストを作成
     all_topics = []
-    for topics in df_analyzed['analysis_key_topics']:
+    for topics in df_analyzed["analysis_key_topics"]:
         if isinstance(topics, list):
             all_topics.extend(topics)
-    
+
     # トピックの出現頻度
     topic_counts = pd.Series(all_topics).value_counts()
 
     # モデレーション結果の集計
     moderation_summary = {}
-    moderation_categories = ["hate", "hate_threatening", "self_harm", "sexual", "sexual_minors", "violence", "violence_graphic"]
+    moderation_categories = [
+        "hate",
+        "hate_threatening",
+        "self_harm",
+        "sexual",
+        "sexual_minors",
+        "violence",
+        "violence_graphic",
+    ]
     for cat in moderation_categories:
         col_name = f"moderation_categories_{cat}"
         if col_name in df_analyzed.columns:
             moderation_summary[cat] = df_analyzed[col_name].sum()
         else:
-            moderation_summary[cat] = 0 # 列がない場合は0
+            moderation_summary[cat] = 0  # 列がない場合は0
 
     # 感情スコアの平均
     emotion_avg = {}
@@ -278,7 +418,7 @@ def summarize_results(df_analyzed: pd.DataFrame):
         if col_name in df_analyzed.columns:
             emotion_avg[emo] = df_analyzed[col_name].mean()
         else:
-            emotion_avg[emo] = 0.0 # 列がない場合は0
+            emotion_avg[emo] = 0.0  # 列がない場合は0
 
     # ワードクラウド用の単語リスト
     # SudachiPyで再度分かち書きして、名詞・動詞・形容詞のみを抽出
@@ -286,16 +426,20 @@ def summarize_results(df_analyzed: pd.DataFrame):
     # df_analyzed.columns[0]は元のExcelの最初の列名なので、分析対象列を使うべき
     # analyze_dataframeで渡されたcolumn_nameをここで使うか、df_analyzedに保存しておくべき
     # 簡単化のため、ここではanalysis_verbatim_quoteを結合して使用
-    all_text = ' '.join(df_analyzed['analysis_verbatim_quote'].dropna().astype(str))
-    nlp = get_tokenizer('A')
+    all_text = " ".join(df_analyzed["analysis_verbatim_quote"].dropna().astype(str))
+    nlp = get_tokenizer("A")
     doc = nlp(all_text)
-    words_for_wordcloud = [token.text for token in doc if token.pos_ in ['NOUN', 'VERB', 'ADJ'] and len(token.text) > 1]
+    words_for_wordcloud = [
+        token.text
+        for token in doc
+        if token.pos_ in ["NOUN", "VERB", "ADJ"] and len(token.text) > 1
+    ]
 
     summary = {
         "sentiment_counts": sentiment_counts,
-        "topic_counts": topic_counts.head(15), # 上位15トピック
+        "topic_counts": topic_counts.head(15),  # 上位15トピック
         "moderation_summary": moderation_summary,
-        "emotion_avg": emotion_avg
+        "emotion_avg": emotion_avg,
     }
 
     return summary, words_for_wordcloud
