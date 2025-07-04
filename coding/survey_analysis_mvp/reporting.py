@@ -33,17 +33,16 @@ FONT_PATH_TTF = os.path.join(FONT_DIR, "NotoSansJP-Regular.ttf")
 FONT_PATH_OTF = os.path.join(FONT_DIR, "NotoSansJP-Regular.otf")
 FONT_PATH = FONT_PATH_TTF if os.path.exists(FONT_PATH_TTF) else FONT_PATH_OTF
 
+# Boldフォントのパス
+BOLD_FONT_PATH_TTF = os.path.join(FONT_DIR, "NotoSansJP-Bold.ttf")
+BOLD_FONT_PATH_OTF = os.path.join(FONT_DIR, "NotoSansJP-Bold.otf")
+BOLD_FONT_PATH = (
+    BOLD_FONT_PATH_TTF if os.path.exists(BOLD_FONT_PATH_TTF) else BOLD_FONT_PATH_OTF
+)
 
-def find_japanese_font() -> Optional[str]:
-    """可能な日本語フォントファイルのパスを返す"""
-    candidates = [
-        FONT_PATH,
-        os.path.join(os.getenv("WINDIR", "C:\\Windows"), "Fonts", "meiryo.ttc"),
-        os.path.join(os.getenv("WINDIR", "C:\\Windows"), "Fonts", "msgothic.ttc"),
-        os.path.join(os.getenv("WINDIR", "C:\\Windows"), "Fonts", "YuGothR.ttc"),
-        os.path.join(os.getenv("WINDIR", "C:\\Windows"), "Fonts", "YuGothM.ttc"),
-    ]
 
+def _find_font(candidates) -> Optional[str]:
+    """候補リストから利用可能なフォントパスを返す"""
     found_ttc = False
     for path in candidates:
         if not os.path.exists(path):
@@ -54,7 +53,6 @@ def find_japanese_font() -> Optional[str]:
         if ext == ".ttc":
             found_ttc = True
 
-    # matplotlib経由で検索
     for name in ["MS Gothic", "Meiryo", "Yu Gothic", "Noto Sans CJK JP"]:
         try:
             path = mpl.font_manager.findfont(name)
@@ -75,7 +73,24 @@ def find_japanese_font() -> Optional[str]:
     return None
 
 
-AVAILABLE_FONT_PATH = find_japanese_font()
+def find_japanese_fonts() -> tuple[Optional[str], Optional[str]]:
+    """レギュラーとボールドの日本語フォントパスを返す"""
+
+    regular = _find_font(
+        [
+            FONT_PATH,
+            os.path.join(os.getenv("WINDIR", "C:\\Windows"), "Fonts", "meiryo.ttc"),
+            os.path.join(os.getenv("WINDIR", "C:\\Windows"), "Fonts", "msgothic.ttc"),
+            os.path.join(os.getenv("WINDIR", "C:\\Windows"), "Fonts", "YuGothR.ttc"),
+            os.path.join(os.getenv("WINDIR", "C:\\Windows"), "Fonts", "YuGothM.ttc"),
+        ]
+    )
+
+    bold = _find_font([BOLD_FONT_PATH]) if BOLD_FONT_PATH else None
+    return regular, bold
+
+
+AVAILABLE_FONT_PATH, AVAILABLE_BOLD_FONT_PATH = find_japanese_fonts()
 
 
 def set_japanese_font() -> bool:
@@ -234,6 +249,8 @@ def generate_pdf_report(summary_data: dict, output_path: str):
     if AVAILABLE_FONT_PATH:
         pdf.add_font("NotoSansJP", "", AVAILABLE_FONT_PATH, uni=True)
         pdf.set_font("NotoSansJP", "", 12)
+    if os.path.exists(BOLD_FONT_PATH):
+        pdf.add_font("NotoSansJP", "B", BOLD_FONT_PATH, uni=True)
     pdf.write_html(html_out)
     pdf.output(output_path)
     print(f"PDFレポートが '{output_path}' として生成されました。")

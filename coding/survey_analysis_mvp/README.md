@@ -19,7 +19,7 @@
 ### ステップ1: フォントの準備
 
 PDFやグラフで日本語を正しく表示するため、事前に日本語フォントを準備します。
-`fonts` フォルダには **TTF 形式** の `NotoSansJP-Regular.ttf` を配置してください。
+`fonts` フォルダには **TTF 形式** の `NotoSansJP-Regular.ttf` と `NotoSansJP-Bold.ttf` を配置してください。
 **重要**: OTF 形式は `fpdf2` でサポートされずエラーになります。必ず TTF 版を用意してください。
 Windows の既存フォント (Meiryo など) も利用できます。PDF生成には `fpdf2` を使用しており、`.ttc` 形式のフォントも利用可能です。
 Noto Sans JP は [Google Fonts](https://fonts.google.com/noto/specimen/Noto+Sans+JP) から入手できます。
@@ -83,9 +83,9 @@ python main.py
   - OpenAIのAPI残高が不足していないか確認してください。
 
 - **グラフやPDFの日本語が四角（豆腐）になる:**
-  - Windowsの日本語フォントが利用できないか、`fonts`フォルダにフォントが配置されていない可能性があります。必要に応じて`NotoSansJP-Regular.otf`を配置してください。
+  - Windowsの日本語フォントが利用できないか、`fonts`フォルダにフォントが配置されていない可能性があります。必要に応じて`NotoSansJP-Regular.ttf`と`NotoSansJP-Bold.ttf`を配置してください。
 - **PDF生成でFileNotFoundErrorが出る:**
-  - `fonts/NotoSansJP-Regular.otf` が存在するか確認してください。
+  - `fonts/NotoSansJP-Regular.ttf` および `fonts/NotoSansJP-Bold.ttf` が存在するか確認してください。
 
 - **アプリケーションが起動しない:**
   - 「ステップ3: 必要なライブラリのインストール」が正しく完了しているか確認してください。再度 `pip install -r requirements.txt` を実行してみてください。
