@@ -1,3 +1,5 @@
+"""Utility functions for generating PDF reports and visualizations."""
+
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import io
@@ -74,7 +76,12 @@ def _find_font(candidates) -> Optional[str]:
 
 
 def find_japanese_fonts() -> tuple[Optional[str], Optional[str]]:
-    """レギュラーとボールドの日本語フォントパスを返す"""
+    """Return available regular and bold Japanese font paths.
+
+    Returns:
+        Tuple of paths for regular and bold fonts. ``None`` is returned if a
+        suitable font could not be located.
+    """
 
     regular = _find_font(
         [
@@ -94,7 +101,11 @@ AVAILABLE_FONT_PATH, AVAILABLE_BOLD_FONT_PATH = find_japanese_fonts()
 
 
 def set_japanese_font() -> bool:
-    """matplotlibに日本語フォントを設定する"""
+    """Configure matplotlib to use a Japanese font.
+
+    Returns:
+        ``True`` if a font was set successfully, otherwise ``False``.
+    """
     if not AVAILABLE_FONT_PATH:
         mpl.rcParams["axes.unicode_minus"] = False
         return False
@@ -114,7 +125,14 @@ def set_japanese_font() -> bool:
 
 
 def create_sentiment_pie_chart_base64(sentiment_counts: pd.Series) -> str:
-    """感情の割合から円グラフを生成し、Base64エンコードされたPNG文字列を返す"""
+    """Create a sentiment pie chart as a Base64 string.
+
+    Args:
+        sentiment_counts: Series mapping sentiment labels to counts.
+
+    Returns:
+        PNG image data encoded in Base64. Empty string if no data.
+    """
     if not set_japanese_font() or sentiment_counts.empty:
         return ""
 
@@ -138,7 +156,14 @@ def create_sentiment_pie_chart_base64(sentiment_counts: pd.Series) -> str:
 
 
 def create_topics_bar_chart_base64(topic_counts: pd.Series) -> str:
-    """トピックの出現頻度から棒グラフを生成し、Base64エンコードされたPNG文字列を返す"""
+    """Create a horizontal bar chart of topic frequencies.
+
+    Args:
+        topic_counts: Series of topic counts.
+
+    Returns:
+        PNG image data encoded in Base64. Empty string if no data.
+    """
     if not set_japanese_font() or topic_counts.empty:
         return ""
 
@@ -157,7 +182,14 @@ def create_topics_bar_chart_base64(topic_counts: pd.Series) -> str:
 
 
 def create_moderation_bar_chart_base64(moderation_summary: dict) -> str:
-    """モデレーション結果から棒グラフを生成し、Base64エンコードされたPNG文字列を返す"""
+    """Create a bar chart summarizing moderation results.
+
+    Args:
+        moderation_summary: Mapping of moderation category to count.
+
+    Returns:
+        PNG image data encoded in Base64. Empty string if no data.
+    """
     if not set_japanese_font() or not moderation_summary:
         return ""
 
@@ -180,7 +212,14 @@ def create_moderation_bar_chart_base64(moderation_summary: dict) -> str:
 
 
 def create_emotion_radar_chart_base64(emotion_avg: dict) -> str:
-    """感情スコアの平均からレーダーチャートを生成し、Base64エンコードされたPNG文字列を返す"""
+    """Create a radar chart of average emotion scores.
+
+    Args:
+        emotion_avg: Mapping of emotion label to average score.
+
+    Returns:
+        PNG image data encoded in Base64. Empty string if no data.
+    """
     if not set_japanese_font() or not emotion_avg:
         return ""
 
@@ -210,7 +249,12 @@ def create_emotion_radar_chart_base64(emotion_avg: dict) -> str:
 
 
 def generate_pdf_report(summary_data: dict, output_path: str):
-    """集計データからPDFレポートを生成する"""
+    """Generate a PDF report from aggregated data.
+
+    Args:
+        summary_data: Dictionary produced by :func:`summarize_results`.
+        output_path: Destination file path for the generated PDF.
+    """
     if not os.path.exists(FONT_PATH):
         raise FileNotFoundError(
             f"Required font file not found: {FONT_PATH}. Please place NotoSansJP-Regular.ttf in the fonts directory before generating PDFs."
@@ -228,7 +272,8 @@ def generate_pdf_report(summary_data: dict, output_path: str):
         summary_data.get("emotion_avg", {})
     )
 
-    env = Environment(loader=FileSystemLoader("."))
+    template_dir = Path(__file__).parent
+    env = Environment(loader=FileSystemLoader(template_dir))
     template = env.get_template("report_template.html")
     font_uri = (
         Path(AVAILABLE_FONT_PATH).resolve().as_uri() if AVAILABLE_FONT_PATH else ""
@@ -257,7 +302,12 @@ def generate_pdf_report(summary_data: dict, output_path: str):
 
 
 def generate_wordcloud(words: list, output_path: str):
-    """単語リストからワードクラウド画像を生成・保存する"""
+    """Generate and save a word cloud image.
+
+    Args:
+        words: List of words to visualize.
+        output_path: Destination file path for the PNG image.
+    """
     if not words:
         print("ワードクラウドを生成するための単語がありません。")
         return
