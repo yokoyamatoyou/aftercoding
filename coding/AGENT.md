@@ -293,6 +293,7 @@ Gemini CLIに高品質で一貫性のある、プロジェクトのアーキテ�
 * **フォーマット:** コードのフォーマットにはBlackを使用します。  
 * **ドキュメンテーション:** 全ての公開関数とクラスには、Googleスタイルのdocstringを記述してください。  
 * **非同期処理:** ネットワークI/Oなど、待機時間が発生する処理にはasync/awaitを積極的に使用してください。
+* **構文チェック:** 非ASCIIパスを含むファイルも確実に検証できるよう、`scripts/compile_all.py` で全 `*.py` ファイルを `py_compile` に掛けるテストを推奨します。
 
 ## **4\. ツール利用時のガイドライン**
 
@@ -432,6 +433,16 @@ io.BytesIOを用いたインメモリでの画像処理、Base64エンコーデ�
 * **定量的分析:** センチメントの内訳、トピックの出現頻度など、matplotlibで生成したグラフや表を掲載するセクション。データの全体像を視覚的に示す。  
 * **定性的深掘り:** LLMによって抽出された主要なテーマごとにセクションを設け、それぞれのテーマを裏付ける代表的なverbatim\_quote（生の声）を複数掲載する。これにより、定量データに質的な文脈と説得力を与える。  
 * **実行可能な提言:** LLMがactionable\_insight: trueと判定した回答をリストアップし、具体的な改善アクションに繋げるためのセクション。
+
+### **3.4. PDF出力ルール**
+
+`pdfmake.md` に基づき、PDFレポート生成は次の手順で実装する。
+
+* `generate_pdf_report(summary_data: dict, output_path: str)` で各グラフ関数から取得したBase64画像を `report_template.html` へ埋め込む。
+* `PDF(FPDF, HTMLMixin)` を使用し、`pdf.add_page()` の直後に `pdf.add_font()` で `NotoSansJP` フォント(通常・太字)を `uni=True` 指定で登録する。
+* その後 `pdf.set_font("NotoSansJP", "", 12)` を設定し、`pdf.write_html()` でHTMLを描画する。
+* フォントファイルが存在しない場合は `FileNotFoundError` を発生させる。
+* `create_sentiment_pie_chart_base64` などのグラフ生成関数は入力が空の場合、空文字列を返す実装とする。
 
 ---
 
