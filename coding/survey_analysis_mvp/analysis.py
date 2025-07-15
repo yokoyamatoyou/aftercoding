@@ -100,6 +100,23 @@ class ComprehensiveAnalysisResult(BaseModel):
     emotion_scores: EmotionScores
 
 
+class ReportCommentary(BaseModel):
+    """LLMによって生成されたレポートの解説文。"""
+
+    summary_text: str = Field(
+        description="分析結果全体を3つのポイントで要約した総括文。"
+    )
+    action_items: List[str] = Field(
+        description="分析結果から考えられる具体的なネクストアクションの提案リスト。3つ提案すること。"
+    )
+    sentiment_commentary: str = Field(
+        description="感情分析の円グラフから読み取れるインサイトや注目点を解説する文章。"
+    )
+    topics_commentary: str = Field(
+        description="主要トピックの棒グラフから読み取れるインサイトや注目点を解説する文章。"
+    )
+
+
 # --- spaCy日本語トークナイザ ---
 def get_tokenizer(mode: str = "B"):
     """Return a spaCy pipeline with SudachiPy tokenizer.
@@ -119,6 +136,43 @@ def get_tokenizer(mode: str = "B"):
         }
     }
     return spacy.blank("ja", config=config)
+
+
+async def generate_report_commentary(summary_data: dict) -> ReportCommentary:
+    """集計済みデータに基づき、LLMにレポートの解説文を生成させる。"""
+
+    context = f"""
+    以下のアンケート分析結果データに基づき、プロのマーケティングアナリストとして、示唆に富んだレポート解説文を生成してください。
+
+    # 感情分析結果 (件数)
+    {summary_data.get('sentiment_counts', 'データなし').to_string()}
+
+    # 主要トピック Top 15 (件数)
+    {summary_data.get('topic_counts', 'データなし').to_string()}
+    """
+
+    try:
+        commentary = await aclient.chat.completions.create(
+            model="gpt-4o-mini",
+            response_model=ReportCommentary,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "あなたは、データからインサイトを抽出し、分かりやすく解説する優秀なマーケティングアナリストです。",
+                },
+                {"role": "user", "content": context},
+            ],
+            max_retries=2,
+        )
+        return commentary
+    except Exception as e:
+        print(f"LLM解説生成エラー: {e}")
+        return ReportCommentary(
+            summary_text="解説の生成中にエラーが発生しました。",
+            action_items=["N/A"],
+            sentiment_commentary="解説の生成中にエラーが発生しました。",
+            topics_commentary="解説の生成中にエラーが発生しました。",
+        )
 
 
 # --- コア分析関数 ---
@@ -364,15 +418,8 @@ async def analyze_dataframe(
 
 
 # --- 集計関数 ---
-def summarize_results(df_analyzed: pd.DataFrame):
-    """Summarize analyzed DataFrame for reporting.
-
-    Args:
-        df_analyzed: DataFrame returned by :func:`analyze_dataframe`.
-
-    Returns:
-        Tuple of summary dictionary and list of words for word cloud.
-    """
+async def summarize_results(df_analyzed: pd.DataFrame, column_name: str):
+    """Summarize analyzed DataFrame for reporting."""
     if "analysis_sentiment" not in df_analyzed.columns:
         return None, None
 
@@ -437,9 +484,13 @@ def summarize_results(df_analyzed: pd.DataFrame):
 
     summary = {
         "sentiment_counts": sentiment_counts,
-        "topic_counts": topic_counts.head(15),  # 上位15トピック
+        "topic_counts": topic_counts.head(15),
         "moderation_summary": moderation_summary,
         "emotion_avg": emotion_avg,
+        "analysis_target": f"「{column_name}」列の回答",
     }
+
+    commentary = await generate_report_commentary(summary)
+    summary.update(commentary.model_dump())
 
     return summary, words_for_wordcloud
