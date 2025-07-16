@@ -103,7 +103,19 @@ class ReportPDF(FPDF):
         self.cell(0, 10, "■ 推奨されるネクストアクション", 0, 1, "L")
         self.set_font("NotoSansJP", "", 10)
         for item in action_items:
-            self.multi_cell(0, 7, f"・ {item}", 0, "L")
+            # multi_cell defaults to positioning the cursor at the end of
+            # the written cell. This causes subsequent calls to fail due to
+            # insufficient width. Explicitly reset the X position to the
+            # left margin and move to the next line after each bullet.
+            self.multi_cell(
+                0,
+                7,
+                f"・ {item}",
+                border=0,
+                align="L",
+                new_x="LMARGIN",
+                new_y="NEXT",
+            )
 
     def create_chart_commentary_page(
         self,
