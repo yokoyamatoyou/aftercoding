@@ -4,7 +4,10 @@ from typing import Optional
 
 # Google Cloud Secret Managerクライアントをインポート
 # pip install google-cloud-secret-manager
-from google.cloud import secretmanager
+try:
+    from google.cloud import secretmanager
+except ImportError:  # pragma: no cover - optional dependency
+    secretmanager = None
 
 class AppSettings(BaseSettings):
     # .envファイルからの読み込みを有効にする
@@ -24,6 +27,10 @@ class AppSettings(BaseSettings):
 
     def _load_secrets_from_gcp(self):
         """本番環境の場合、GCP Secret Managerから機密情報を読み込む"""
+        if secretmanager is None:
+            raise RuntimeError(
+                "google-cloud-secret-manager is required to load secrets from GCP"
+            )
         if not self.GCP_PROJECT_ID:
             print("警告: 本番環境ですが、GCP_PROJECT_IDが設定されていません。")
             return
