@@ -40,6 +40,7 @@ Noto Sans JP は [Google Fonts](https://fonts.google.com/noto/specimen/Noto+Sans
 ```bash
 pip install -r requirements.txt
 ```
+> **重要:** `matplotlib` など一部のパッケージがインストールされていないと、グラフ付きPDFレポートの生成に失敗します。アプリケーションを使う前に必ず `pip install -r requirements.txt` を実行してください。
 
 > **補足:** もし `HTML2PDF object has no attribute 'unescape'` というエラーが表示される場合は、
 > 古い `fpdf` パッケージがインストールされている可能性があります。次のコマンドで削除してから
