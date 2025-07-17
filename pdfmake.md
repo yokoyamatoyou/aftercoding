@@ -66,13 +66,6 @@
 | **表示内容** | 不適切コンテンツカテゴリごとの件数を示す棒グラフ。 | **関数 create\_moderation\_bar\_chart\_base64 を実装せよ。**\<br\>- **引数**: moderation\_summary: dict\[str, int\]\<br\>- **戻り値**: str (Base64エンコードされたPNG画像)\<br\>- **処理内容**: \<br\> 1\. figsize=(10, 6)でグラフサイズを指定。\<br\> 2\. ax.barで棒グラフを描画。色はskyblue。\<br\> 3\. X軸ラベルが重ならないよう plt.xticks(rotation=45, ha="right") を設定。\<br\> 4\. その他は感情分析グラフと同様のフローでBase64文字列を生成。 |
 | **データソース** | summary\_data\['moderation\_summary'\] | 型: dict |
 
-### **4.5. 感情スコア分析セクション**
-
-| 項目 | 仕様 | AI向け実装指示 |
-| :---- | :---- | :---- |
-| **セクション名** | 「感情スコア平均」 (H2見出し) | report\_template.html内の\<h2\>タグに記述。 |
-| **表示内容** | 6つの基本感情の平均スコア（0-5）を示すレーダーチャート。 | **関数 create\_emotion\_radar\_chart\_base64 を実装せよ。**\<br\>- **引数**: emotion\_avg: dict\[str, float\]\<br\>- **戻り値**: str (Base64エンコードされたPNG画像)\<br\>- **処理内容**: \<br\> 1\. mathライブラリをインポート。\<br\> 2\. figsize=(6, 6), subplot\_kw=dict(polar=True)で極座標系のグラフを作成。\<br\> 3\. ラベルと値を円周上に配置するため、角度リスト angles を計算。\<br\> 4\. グラフを閉じるため、anglesとstatsの末尾に最初の要素を追加。\<br\> 5\. ax.fillで領域を塗りつぶし(color='red', alpha=0.25)、ax.plotで線を引く。\<br\> 6\. Y軸の範囲を ax.set\_ylim(0, 5\) で0-5に固定。\<br\> 7\. その他は感情分析グラフと同様のフローでBase64文字列を生成。 |
-| **データソース** | summary\_data\['emotion\_avg'\] | 型: dict |
 
 ### **4.6. PDF生成統括**
 
