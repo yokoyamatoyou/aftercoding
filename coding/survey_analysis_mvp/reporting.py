@@ -20,7 +20,6 @@ if version.parse(fpdf_version).major < 2:
     )
 
 
-import math
 
 # --- 定数定義 ---
 A4_WIDTH = 210
@@ -270,44 +269,6 @@ def create_moderation_bar_chart_base64(moderation_summary: dict) -> str:
     plt.close(fig)
 
     return base64.b64encode(buffer.getvalue()).decode("utf-8")
-
-
-def create_emotion_radar_chart_base64(emotion_avg: dict) -> str:
-    """Create a radar chart of average emotion scores.
-
-    Args:
-        emotion_avg: Mapping of emotion label to average score.
-
-    Returns:
-        PNG image data encoded in Base64. Empty string if no data.
-    """
-    if not set_japanese_font() or not emotion_avg:
-        return ""
-
-    labels = list(emotion_avg.keys())
-    stats = list(emotion_avg.values())
-
-    # レーダーチャートの準備
-    angles = [n / float(len(labels)) * 2 * math.pi for n in range(len(labels))]
-    angles += angles[:1]  # 閉じたグラフにするため最初の要素を最後に追加
-    stats += stats[:1]
-
-    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
-    ax.fill(angles, stats, color="red", alpha=0.25)
-    ax.plot(angles, stats, color="red", linewidth=2)
-    ax.set_yticklabels([])  # Y軸のラベルを非表示
-    ax.set_xticks(angles[:-1])
-    ax.set_xticklabels(labels)
-    ax.set_ylim(0, 5)  # スコアの範囲
-    ax.set_title("感情スコア平均", va="bottom")
-
-    buffer = io.BytesIO()
-    plt.savefig(buffer, format="png", bbox_inches="tight")
-    buffer.seek(0)
-    plt.close(fig)
-
-    return base64.b64encode(buffer.getvalue()).decode("utf-8")
-
 
 def generate_pdf_report(summary_data: dict, output_path: str):
     """Generate a PDF report from aggregated data."""
