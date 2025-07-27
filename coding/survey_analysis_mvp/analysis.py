@@ -425,7 +425,11 @@ async def analyze_single_text(
 
 
 async def analyze_dataframe(
-    df: pd.DataFrame, column_name: str, mode: str = "B", progress_callback=None
+    df: pd.DataFrame,
+    column_name: str,
+    mode: str = "B",
+    progress_callback=None,
+    max_concurrent_tasks: int | None = None,
 ) -> pd.DataFrame:
     """Analyze a DataFrame column in parallel and append results.
 
@@ -434,17 +438,28 @@ async def analyze_dataframe(
         column_name: Name of the column containing text responses.
         mode: SudachiPy split mode.
         progress_callback: Optional callback receiving progress percentage.
+        max_concurrent_tasks: Maximum number of analysis tasks to run
+            concurrently. Defaults to ``settings.MAX_CONCURRENT_TASKS``.
 
     Returns:
         DataFrame with analysis results concatenated.
     """
     texts_to_analyze = df[column_name].tolist()
 
-    # asyncioタスクを生成し、各タスクと元のインデックスを紐付ける
-    tasks = {
-        asyncio.create_task(analyze_single_text(text, mode)): idx
+    if max_concurrent_tasks is None:
+        max_concurrent_tasks = settings.MAX_CONCURRENT_TASKS
+
+    semaphore = asyncio.Semaphore(max_concurrent_tasks)
+
+    async def sem_task(idx: int, text: str):
+        async with semaphore:
+            result = await analyze_single_text(text, mode)
+        return idx, result
+
+    tasks = [
+        asyncio.create_task(sem_task(idx, text))
         for idx, text in enumerate(texts_to_analyze)
-    }
+    ]
 
     completed_results = [None] * len(texts_to_analyze)
     total = len(tasks)
@@ -452,8 +467,7 @@ async def analyze_dataframe(
 
     # タスクが完了するたびに結果を格納して進捗を更新
     for coro in asyncio.as_completed(tasks):
-        result = await coro
-        idx = tasks[coro]
+        idx, result = await coro
         completed_results[idx] = result
         finished += 1
         if progress_callback:

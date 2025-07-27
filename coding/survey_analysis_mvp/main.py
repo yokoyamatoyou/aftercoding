@@ -177,6 +177,7 @@ class App(ctk.CTk):
                     self.df,
                     column,
                     progress_callback=self.update_progress,
+                    max_concurrent_tasks=settings.MAX_CONCURRENT_TASKS,
                 )
                 self.summary_data, self.wordcloud_words = await summarize_results(
                     self.df_analyzed, column

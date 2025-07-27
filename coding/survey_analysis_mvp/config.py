@@ -19,6 +19,7 @@ class AppSettings(BaseSettings):
 
     # .envファイルまたはSecret Managerから取得する値
     OPENAI_API_KEY: Optional[str] = None
+    MAX_CONCURRENT_TASKS: int = 5
 
     def __init__(self, **values):
         super().__init__(**values)
