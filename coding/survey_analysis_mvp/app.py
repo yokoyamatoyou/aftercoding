@@ -49,7 +49,9 @@ class App(ctk.CTk):
         # run frame
         run_frame = ctk.CTkFrame(self)
         run_frame.pack(padx=20, pady=20, fill="x")
-        self.run_button = ctk.CTkButton(run_frame, text="レポート生成開始", command=self.run)
+        self.run_button = ctk.CTkButton(
+            run_frame, text="レポート生成開始", command=self.run
+        )
         self.run_button.pack(pady=5)
         self.progress = ctk.CTkProgressBar(run_frame)
         self.progress.set(0)
@@ -76,13 +78,16 @@ class App(ctk.CTk):
             return
 
         self.run_button.configure(state="disabled")
+        self.progress.set(0)
         self.status.configure(text="分析中...")
         self.update()
         try:
             df, pos_sum, neg_sum = analyze_survey(self.file_path, column)
+            self.progress.set(0.5)
             self.status.configure(text="レポート生成中...")
             self.update()
             create_report(df, pos_sum, neg_sum, self.wc_var.get(), column)
+            self.progress.set(1)
             self.status.configure(text="完了")
             messagebox.showinfo("完了", "レポートを output フォルダに保存しました")
         except Exception as e:
