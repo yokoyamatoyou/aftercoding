@@ -13,7 +13,7 @@ import seaborn as sns
 from wordcloud import WordCloud
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML, CSS
-
+from fpdf import FPDF
 
 
 # --- 定数定義 ---
@@ -265,6 +265,7 @@ def create_moderation_bar_chart_base64(moderation_summary: dict) -> str:
 
     return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
+
 def generate_pdf_report(summary_data: dict, output_path: str):
     """Generate a PDF report from aggregated data."""
 
@@ -371,11 +372,18 @@ def create_report(
 
     # 1. sentiment chart
     chart_path = os.path.join(output_dir, "sentiment_chart.png")
-    sentiment_counts = df["sentiment"].value_counts().reindex([
-        "positive",
-        "neutral",
-        "negative",
-    ], fill_value=0)
+    sentiment_counts = (
+        df["sentiment"]
+        .value_counts()
+        .reindex(
+            [
+                "positive",
+                "neutral",
+                "negative",
+            ],
+            fill_value=0,
+        )
+    )
     plt.figure()
     sns.barplot(x=sentiment_counts.index, y=sentiment_counts.values, palette="pastel")
     plt.ylabel("Count")
@@ -388,11 +396,21 @@ def create_report(
     if wordcloud_type == "normal":
         texts = df[text_column].fillna("").astype(str)
     elif wordcloud_type == "positive":
-        texts = df[df["sentiment"].isin(["positive", "neutral"])] [text_column].fillna("").astype(str)
+        texts = (
+            df[df["sentiment"].isin(["positive", "neutral"])][text_column]
+            .fillna("")
+            .astype(str)
+        )
     else:
-        texts = df[df["sentiment"].isin(["negative", "neutral"])] [text_column].fillna("").astype(str)
+        texts = (
+            df[df["sentiment"].isin(["negative", "neutral"])][text_column]
+            .fillna("")
+            .astype(str)
+        )
 
-    wc = WordCloud(width=800, height=400, background_color="white", font_path=FONT_REGULAR_PATH)
+    wc = WordCloud(
+        width=800, height=400, background_color="white", font_path=FONT_REGULAR_PATH
+    )
     wc.generate(" ".join(texts))
     wc_path = os.path.join(output_dir, "wordcloud.png")
     wc.to_file(wc_path)
