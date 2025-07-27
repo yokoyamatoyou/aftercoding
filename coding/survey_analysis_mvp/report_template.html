@@ -6,19 +6,37 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
+  <header>
     <h1>アンケート一括分析 サマリーレポート</h1>
-    
-    <h2>感情分析</h2>
-    <div class="chart-container">
-      <img src="{{ sentiment_chart_path }}" alt="感情分析グラフ" />
+  </header>
+  <div class="container">
+
+    <div class="two-column">
+      <div>
+        <h2>感情分析</h2>
+        <div class="chart-container">
+          <img src="{{ sentiment_chart_path }}" alt="感情分析グラフ" />
+        </div>
+      </div>
+      <section>
+        <h2>ポジティブ要約</h2>
+        <p>{{ positive_summary }}</p>
+      </section>
     </div>
 
-    <h2>主要トピック</h2>
-    <div class="chart-container">
-      <img src="{{ wordcloud_path }}" alt="ワードクラウド" />
+    <div class="two-column">
+      <div>
+        <h2>主要トピック</h2>
+        <div class="chart-container">
+          <img src="{{ wordcloud_path }}" alt="ワードクラウド" />
+        </div>
+      </div>
+      <section>
+        <h2>ネガティブ要約</h2>
+        <p>{{ negative_summary }}</p>
+      </section>
     </div>
-    
+
     <div class="table-container">
         <h3>トピック一覧</h3>
         {{ topic_table|safe }}
@@ -34,16 +52,7 @@
       <img src="data:image/png;base64,{{ emotion_chart_base64 }}" alt="感情スコア平均グラフ" />
     </div>
 
-    <section>
-      <h2>ポジティブ要約</h2>
-      <p>{{ positive_summary }}</p>
-    </section>
-
-    <section>
-      <h2>ネガティブ要約</h2>
-      <p>{{ negative_summary }}</p>
-    </section>
-
   </div>
+  <footer></footer>
 </body>
 </html>
