@@ -31,6 +31,9 @@ Noto Sans JP は [Google Fonts](https://fonts.google.com/noto/specimen/Noto+Sans
 - 変数名: `OPENAI_API_KEY`
 - 値: `sk-`で始まるあなたのOpenAI APIキー
 
+オプションで `MAX_CONCURRENT_TASKS` を設定すると、同時に実行する
+OpenAI API リクエストの最大数を調整できます。デフォルトは `5` です。
+
 または、プロジェクトフォルダに `.env` という名前のファイルを作成し、`OPENAI_API_KEY="sk-..."` のように記述することも可能です。
 
 ### ステップ3: 必要なライブラリのインストール
