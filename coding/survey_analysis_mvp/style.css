@@ -6,8 +6,21 @@ body {
     font-family: 'NotoSansJP', sans-serif;
     margin: 2cm;
 }
-header, footer {
+
+header {
     text-align: center;
+    margin-bottom: 20px;
+    position: running(header);
+}
+
+footer {
+    text-align: center;
+    font-size: 0.8em;
+    position: running(footer);
+}
+
+footer::after {
+    content: counter(page);
 }
 section {
     margin-bottom: 20px;
@@ -16,7 +29,22 @@ img {
     max-width: 100%;
     height: auto;
 }
+
+.two-column {
+    display: flex;
+    gap: 20px;
+}
+
+.two-column > * {
+    flex: 1;
+}
 @page {
     size: A4;
     margin: 2cm;
+    @top-center {
+        content: element(header);
+    }
+    @bottom-center {
+        content: element(footer);
+    }
 }
