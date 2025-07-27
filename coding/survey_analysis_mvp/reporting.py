@@ -280,27 +280,51 @@ def create_report(
     plt.close()
 
     # 2. word cloud
+    wordcloud_path = ""
+    positive_wc_path = ""
+    negative_wc_path = ""
     if wordcloud_type == "normal":
         texts = df[text_column].fillna("").astype(str)
-    elif wordcloud_type == "positive":
-        texts = (
+        wc = WordCloud(
+            width=800, height=400, background_color="white", font_path=FONT_REGULAR_PATH
+        )
+        wc.generate(" ".join(texts))
+        wordcloud_path = os.path.join(output_dir, "wordcloud.png")
+        wc.to_file(wordcloud_path)
+    else:
+        # Positive word cloud
+        texts_pos = (
             df[df["sentiment"].isin(["positive", "neutral"])][text_column]
             .fillna("")
             .astype(str)
         )
-    else:
-        texts = (
+        if not texts_pos.empty:
+            wc_pos = WordCloud(
+                width=800,
+                height=400,
+                background_color="white",
+                font_path=FONT_REGULAR_PATH,
+            )
+            wc_pos.generate(" ".join(texts_pos))
+            positive_wc_path = os.path.join(output_dir, "positive_wordcloud.png")
+            wc_pos.to_file(positive_wc_path)
+
+        # Negative word cloud
+        texts_neg = (
             df[df["sentiment"].isin(["negative", "neutral"])][text_column]
             .fillna("")
             .astype(str)
         )
-
-    wc = WordCloud(
-        width=800, height=400, background_color="white", font_path=FONT_REGULAR_PATH
-    )
-    wc.generate(" ".join(texts))
-    wc_path = os.path.join(output_dir, "wordcloud.png")
-    wc.to_file(wc_path)
+        if not texts_neg.empty:
+            wc_neg = WordCloud(
+                width=800,
+                height=400,
+                background_color="white",
+                font_path=FONT_REGULAR_PATH,
+            )
+            wc_neg.generate(" ".join(texts_neg))
+            negative_wc_path = os.path.join(output_dir, "negative_wordcloud.png")
+            wc_neg.to_file(negative_wc_path)
 
     # 3. render HTML via Jinja2
     env = Environment(loader=FileSystemLoader(os.path.dirname(__file__)))
@@ -309,7 +333,9 @@ def create_report(
         "positive_summary": positive_summary,
         "negative_summary": negative_summary,
         "sentiment_chart_path": chart_path,
-        "wordcloud_path": wc_path,
+        "wordcloud_path": wordcloud_path,
+        "positive_wordcloud_path": positive_wc_path,
+        "negative_wordcloud_path": negative_wc_path,
         "total_count": len(df),
     }
     html_out = template.render(**context)
