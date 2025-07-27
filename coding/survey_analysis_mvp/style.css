@@ -30,6 +30,16 @@ img {
     height: auto;
 }
 
+.wordcloud-container {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.wordcloud-container img {
+    flex: 1;
+}
+
 .two-column {
     display: flex;
     gap: 20px;
