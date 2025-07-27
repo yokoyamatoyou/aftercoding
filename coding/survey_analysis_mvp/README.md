@@ -20,8 +20,8 @@
 
 PDFやグラフで日本語を正しく表示するため、事前に日本語フォントを準備します。
 このリポジトリには `fonts` フォルダに NotoSansJP のフォント一式を同梱しています。
-別のフォントを使用する場合は、`fonts` フォルダに `NotoSansJP-Regular` と `NotoSansJP-Bold` の **TTF または OTF** 版を配置してください。（`fpdf2` では TTF が推奨ですが、OTF も利用できます。）
-Windows の既存フォント (Meiryo など) も利用できます。PDF生成には `fpdf2` を使用しており、`.ttc` 形式のフォントも利用可能です。
+別のフォントを使用する場合は、`fonts` フォルダに `NotoSansJP-Regular` と `NotoSansJP-Bold` の **TTF または OTF** 版を配置してください。TTF/OTF どちらも利用可能です。
+Windows の既存フォント (Meiryo など) も利用できます。PDF生成には **WeasyPrint** を使用しており、`.ttc` 形式のフォントも利用可能です。
 Noto Sans JP は [Google Fonts](https://fonts.google.com/noto/specimen/Noto+Sans+JP) から入手できます。
 
 ### ステップ2: APIキーの設定
@@ -45,21 +45,16 @@ pip install -r requirements.txt
 ```
 > **重要:** `matplotlib` など一部のパッケージがインストールされていないと、グラフ付きPDFレポートの生成に失敗します。アプリケーションを使う前に必ず `pip install -r requirements.txt` を実行してください。
 
-> **補足:** もし `HTML2PDF object has no attribute 'unescape'` というエラーが表示される場合は、
-> 古い `fpdf` パッケージがインストールされている可能性があります。次のコマンドで削除してから
-> `fpdf2` を再インストールしてください。
->
-> ```bash
-> pip uninstall fpdf
-> pip install --upgrade fpdf2
-> ```
+> **補足:** WeasyPrint の実行には Cairo や Pango などのシステムライブラリが必要です。
+> Linux 環境でエラーが出る場合はこれらのライブラリをインストールしてください。
+> 具体的なコマンド例は [WeasyPrint のドキュメント](https://weasyprint.readthedocs.io/) を参照してください。
 
 ## 3. アプリケーションの起動方法
 
 ターミナルで以下のコマンドを実行します。
 
 ```bash
-python main.py
+python app.py
 ```
 
 ## 4. 使用方法
