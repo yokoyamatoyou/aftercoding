@@ -24,18 +24,26 @@
       </section>
     </div>
 
-    <div class="two-column">
-      <div>
-        <h2>主要トピック</h2>
-        <div class="chart-container">
-          <img src="{{ wordcloud_path }}" alt="ワードクラウド" />
+      <div class="two-column">
+        <div>
+          <h2>主要トピック</h2>
+          <div class="chart-container">
+            {% if positive_wordcloud_path %}
+            <img src="{{ positive_wordcloud_path }}" alt="ポジティブワードクラウド" />
+            {% endif %}
+            {% if negative_wordcloud_path %}
+            <img src="{{ negative_wordcloud_path }}" alt="ネガティブワードクラウド" />
+            {% endif %}
+            {% if wordcloud_path %}
+            <img src="{{ wordcloud_path }}" alt="ワードクラウド" />
+            {% endif %}
+          </div>
         </div>
+        <section>
+          <h2>ネガティブ要約</h2>
+          <p>{{ negative_summary }}</p>
+        </section>
       </div>
-      <section>
-        <h2>ネガティブ要約</h2>
-        <p>{{ negative_summary }}</p>
-      </section>
-    </div>
 
     <div class="table-container">
         <h3>トピック一覧</h3>
