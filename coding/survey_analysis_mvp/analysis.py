@@ -439,26 +439,25 @@ async def analyze_dataframe(
         DataFrame with analysis results concatenated.
     """
     texts_to_analyze = df[column_name].tolist()
-    tasks = [analyze_single_text(text, mode) for text in texts_to_analyze]
 
-    results = []
-    # asyncio.as_completedは順不同なので、元のDataFrameのインデックスを保持する
-    # ここでは簡単化のため、元のdfのインデックスに結果をマッピングする
-    # （ただし、上記の実装では結果の順序が保証されないため、より堅牢な実装が必要）
-    # 今回は簡単化のため、結果のリストをそのまま列に追加します。
+    # asyncioタスクを生成し、各タスクと元のインデックスを紐付ける
+    tasks = {
+        asyncio.create_task(analyze_single_text(text, mode)): idx
+        for idx, text in enumerate(texts_to_analyze)
+    }
 
-    # 順序を保証するために、タスクと元のインデックスをペアにする
-    indexed_tasks = [
-        (i, analyze_single_text(text, mode)) for i, text in enumerate(texts_to_analyze)
-    ]
-
-    # 完了したタスクから結果を収集し、元のインデックスでソートする
     completed_results = [None] * len(texts_to_analyze)
-    for i, (original_index, task) in enumerate(indexed_tasks):
-        result = await task
-        completed_results[original_index] = result
+    total = len(tasks)
+    finished = 0
+
+    # タスクが完了するたびに結果を格納して進捗を更新
+    for coro in asyncio.as_completed(tasks):
+        result = await coro
+        idx = tasks[coro]
+        completed_results[idx] = result
+        finished += 1
         if progress_callback:
-            progress_callback(((i + 1) / len(texts_to_analyze)) * 100)
+            progress_callback(finished / total * 100)
 
     # 結果をDataFrameに変換
     survey_analysis_results = []
