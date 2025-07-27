@@ -4,6 +4,8 @@ customtkinter
 wordcloud
 fpdf2>=2.7
 matplotlib
+seaborn
+weasyprint
 jinja2
 spacy
 sudachipy

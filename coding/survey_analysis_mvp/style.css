@@ -1,0 +1,22 @@
+@font-face {
+    font-family: 'NotoSansJP';
+    src: url('fonts/NotoSansJP-Regular.otf');
+}
+body {
+    font-family: 'NotoSansJP', sans-serif;
+    margin: 2cm;
+}
+header, footer {
+    text-align: center;
+}
+section {
+    margin-bottom: 20px;
+}
+img {
+    max-width: 100%;
+    height: auto;
+}
+@page {
+    size: A4;
+    margin: 2cm;
+}
