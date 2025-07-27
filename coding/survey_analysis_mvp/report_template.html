@@ -3,49 +3,7 @@
 <head>
   <title>分析サマリーレポート</title>
   <meta charset="UTF-8">
-  <style>
-    @font-face {
-        font-family: 'NotoSansJP';
-        src: url("{{ font_path }}");
-    }
-    body {
-        font-family: 'NotoSansJP', sans-serif;
-        line-height: 1.6;
-        color: #333;
-    }
-    h1, h2 {
-        color: #2c3e50;
-        border-bottom: 2px solid #3498db;
-        padding-bottom: 10px;
-    }
-    .container {
-        padding: 20px;
-    }
-    .chart-container {
-        text-align: center;
-        margin: 30px 0;
-        page-break-inside: avoid;
-    }
-    .chart-container img {
-        max-width: 90%;
-        height: auto;
-    }
-    .table-container {
-        margin-top: 20px;
-    }
-    table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-    th, td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
-    }
-    th {
-        background-color: #f2f2f2;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
@@ -53,12 +11,12 @@
     
     <h2>感情分析</h2>
     <div class="chart-container">
-      <img src="data:image/png;base64,{{ sentiment_chart_base64 }}" alt="感情分析グラフ" />
+      <img src="{{ sentiment_chart_path }}" alt="感情分析グラフ" />
     </div>
 
     <h2>主要トピック</h2>
     <div class="chart-container">
-      <img src="data:image/png;base64,{{ topics_chart_base64 }}" alt="主要トピックグラフ" />
+      <img src="{{ wordcloud_path }}" alt="ワードクラウド" />
     </div>
     
     <div class="table-container">

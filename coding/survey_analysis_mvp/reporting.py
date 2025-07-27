@@ -9,15 +9,10 @@ from datetime import datetime
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
-from fpdf import FPDF, __version__ as fpdf_version
-from packaging import version
+import seaborn as sns
 from wordcloud import WordCloud
-
-if version.parse(fpdf_version).major < 2:
-    raise ImportError(
-        f"fpdf2>=2 is required but version {fpdf_version} was found.\n"
-        "Please uninstall the old 'fpdf' package and install 'fpdf2'."
-    )
+from jinja2 import Environment, FileSystemLoader
+from weasyprint import HTML, CSS
 
 
 
@@ -351,3 +346,72 @@ def generate_wordcloud(words: list, output_path: str):
 
     wordcloud.to_file(output_path)
     print(f"ワードクラウドが '{output_path}' として保存されました。")
+
+
+def create_report(
+    df: pd.DataFrame,
+    positive_summary: str,
+    negative_summary: str,
+    wordcloud_type: str,
+    text_column: str,
+):
+    """Generate charts, word clouds and a PDF report using WeasyPrint.
+
+    Args:
+        df: Analyzed DataFrame containing a ``sentiment`` column and original text.
+        positive_summary: Summary text for positive comments.
+        negative_summary: Summary text for negative comments.
+        wordcloud_type: "normal", "positive", or "negative" to choose the
+            source text for word clouds.
+        text_column: Name of the column containing original text responses.
+    """
+
+    output_dir = os.path.join(os.path.dirname(__file__), "output")
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 1. sentiment chart
+    chart_path = os.path.join(output_dir, "sentiment_chart.png")
+    sentiment_counts = df["sentiment"].value_counts().reindex([
+        "positive",
+        "neutral",
+        "negative",
+    ], fill_value=0)
+    plt.figure()
+    sns.barplot(x=sentiment_counts.index, y=sentiment_counts.values, palette="pastel")
+    plt.ylabel("Count")
+    plt.title("Sentiment Distribution")
+    plt.tight_layout()
+    plt.savefig(chart_path)
+    plt.close()
+
+    # 2. word cloud
+    if wordcloud_type == "normal":
+        texts = df[text_column].fillna("").astype(str)
+    elif wordcloud_type == "positive":
+        texts = df[df["sentiment"].isin(["positive", "neutral"])] [text_column].fillna("").astype(str)
+    else:
+        texts = df[df["sentiment"].isin(["negative", "neutral"])] [text_column].fillna("").astype(str)
+
+    wc = WordCloud(width=800, height=400, background_color="white", font_path=FONT_REGULAR_PATH)
+    wc.generate(" ".join(texts))
+    wc_path = os.path.join(output_dir, "wordcloud.png")
+    wc.to_file(wc_path)
+
+    # 3. render HTML via Jinja2
+    env = Environment(loader=FileSystemLoader(os.path.dirname(__file__)))
+    template = env.get_template("report_template.html")
+    context = {
+        "positive_summary": positive_summary,
+        "negative_summary": negative_summary,
+        "sentiment_chart_path": chart_path,
+        "wordcloud_path": wc_path,
+        "total_count": len(df),
+    }
+    html_out = template.render(**context)
+
+    css_path = os.path.join(os.path.dirname(__file__), "style.css")
+    pdf_path = os.path.join(output_dir, "survey_report.pdf")
+    HTML(string=html_out, base_url=os.path.dirname(__file__)).write_pdf(
+        pdf_path, stylesheets=[CSS(css_path)]
+    )
+    print(f"PDFレポートが '{pdf_path}' として生成されました。")

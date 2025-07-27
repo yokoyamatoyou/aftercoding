@@ -9,12 +9,79 @@ import pandas as pd
 import asyncio
 from typing import List, Literal
 
+import openai
+
 from pydantic import BaseModel, Field
 import instructor
 from openai import AsyncOpenAI
 import spacy
 
 from config import settings
+
+
+def analyze_survey(file_path: str, column_name: str):
+    """Analyze survey responses and summarize positive/negative feedback.
+
+    Args:
+        file_path: Path to the Excel file.
+        column_name: Column containing free text responses.
+
+    Returns:
+        Tuple of (DataFrame with sentiment column, positive summary text,
+        negative summary text).
+    """
+    df = pd.read_excel(file_path)
+    texts = df[column_name].fillna("").astype(str)
+    sentiments = []
+
+    system_prompt = (
+        "あなたはテキスト分析の専門家です。与えられたテキストを"
+        "ポジティブ、ネガティブ、ニュートラルのいずれか一つに分類してください。"
+    )
+
+    for text in texts:
+        if not text.strip():
+            sentiments.append("neutral")
+            continue
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": text},
+                ],
+            )
+            sentiment = response.choices[0].message.content.strip().lower()
+        except Exception:
+            sentiment = "neutral"
+        sentiments.append(sentiment)
+
+    df["sentiment"] = sentiments
+
+    positive_texts = df.loc[df["sentiment"] == "positive", column_name].tolist()
+    negative_texts = df.loc[df["sentiment"] == "negative", column_name].tolist()
+
+    def summarize(text_list):
+        if not text_list:
+            return ""
+        prompt = (
+            "以下の意見リストは、製品アンケートの回答です。マーケティング担当者が"
+            "傾向を把握できるよう、重要なポイントを3つにまとめてください。\n\n" +
+            "\n".join(text_list)
+        )
+        try:
+            res = openai.ChatCompletion.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return res.choices[0].message.content.strip()
+        except Exception:
+            return ""
+
+    positive_summary = summarize(positive_texts)
+    negative_summary = summarize(negative_texts)
+
+    return df, positive_summary, negative_summary
 
 # InstructorでOpenAIクライアントを初期化
 aclient = instructor.from_openai(
