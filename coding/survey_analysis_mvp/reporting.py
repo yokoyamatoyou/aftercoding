@@ -20,10 +20,10 @@ A4_WIDTH = 210
 A4_HEIGHT = 297
 MARGIN = 15
 
-COLOR_PRIMARY = (44, 62, 80)      # #2c3e50
-COLOR_SECONDARY = (52, 152, 219)   # #3498db
-COLOR_TEXT = (51, 51, 51)          # #333333
-COLOR_LIGHT_GRAY = (242, 242, 242) # #f2f2f2
+COLOR_PRIMARY = (44, 62, 80)  # #2c3e50
+COLOR_SECONDARY = (52, 152, 219)  # #3498db
+COLOR_TEXT = (51, 51, 51)  # #333333
+COLOR_LIGHT_GRAY = (242, 242, 242)  # #f2f2f2
 
 FONT_DIR = os.path.join(os.path.dirname(__file__), "fonts")
 FONT_REGULAR_PATH = os.path.join(FONT_DIR, "NotoSansJP-Regular.otf")
@@ -32,6 +32,7 @@ _FONT_CONFIGURED = False
 
 
 # --- Matplotlib helper ------------------------------------------------------
+
 
 def set_japanese_font() -> bool:
     """Configure matplotlib to use bundled Japanese fonts only once."""
@@ -56,6 +57,7 @@ def set_japanese_font() -> bool:
 
 
 # --- Chart generation -------------------------------------------------------
+
 
 def create_sentiment_pie_chart_base64(sentiment_counts: pd.Series) -> str:
     """Return a base64 PNG string of the sentiment distribution pie chart."""
@@ -122,6 +124,7 @@ def create_moderation_bar_chart_base64(moderation_summary: dict[str, int]) -> st
 
 # --- PDF generation ---------------------------------------------------------
 
+
 class ReportPDF(FPDF):
     """Custom PDF class for 5-page survey reports."""
 
@@ -184,7 +187,11 @@ class ReportPDF(FPDF):
             self.multi_cell(0, 7, f"・ {item}", 0, "L")
 
     def create_chart_commentary_page(
-        self, title: str, chart_base64: str, commentary_text: str, chart_width: int = 160
+        self,
+        title: str,
+        chart_base64: str,
+        commentary_text: str,
+        chart_width: int = 160,
     ) -> None:
         self.add_page()
         self.set_text_color(*COLOR_TEXT)
@@ -225,20 +232,60 @@ class ReportPDF(FPDF):
             self.cell(120, 8, f"  {index}", 1, 0, "L")
             self.cell(40, 8, str(row.values[0]), 1, 1, "C")
 
+    def create_wordcloud_page(self, pos_wc: str | None, neg_wc: str | None) -> None:
+        """Add a page containing positive and negative word cloud images."""
+        if not (pos_wc or neg_wc):
+            return
+
+        self.add_page()
+        self.set_text_color(*COLOR_TEXT)
+
+        self.set_font("NotoSansJP", "B", 18)
+        self.cell(0, 15, "ワードクラウド", 0, 1, "L")
+        self.ln(5)
+
+        if pos_wc:
+            self.set_font("NotoSansJP", "B", 12)
+            self.cell(0, 10, "ポジティブ", 0, 1, "L")
+            self.image(pos_wc, x=(A4_WIDTH - 160) / 2, w=160)
+            self.ln(10)
+
+        if neg_wc:
+            self.set_font("NotoSansJP", "B", 12)
+            self.cell(0, 10, "ネガティブ", 0, 1, "L")
+            self.image(neg_wc, x=(A4_WIDTH - 160) / 2, w=160)
+
 
 # --- Entry point ------------------------------------------------------------
 
-def generate_pdf_report(summary_data: dict, output_path: str) -> None:
-    """Generate a multi-page PDF report from analysis results."""
+
+def generate_pdf_report(
+    summary_data: dict,
+    output_path: str,
+    pos_wc: str | None = None,
+    neg_wc: str | None = None,
+) -> None:
+    """Generate a multi-page PDF report from analysis results.
+
+    Args:
+        summary_data: Dictionary containing chart data and commentary.
+        output_path: Destination PDF file path.
+        pos_wc: Path to the positive word cloud image.
+        neg_wc: Path to the negative word cloud image.
+    """
     pdf = ReportPDF()
     pdf.setup_fonts()
     pdf.set_auto_page_break(auto=True, margin=15)
 
-    pdf.create_cover_page(analysis_target=summary_data.get("analysis_target", "アンケート回答"))
+    pdf.create_cover_page(
+        analysis_target=summary_data.get("analysis_target", "アンケート回答")
+    )
 
     pdf.create_summary_page(
         summary_text=summary_data.get("summary_text", "総括テキストがありません。"),
-        action_items=summary_data.get("action_items", ["アクションアイテムがありません。"]),
+        action_items=summary_data.get(
+            "action_items", ["アクションアイテムがありません。"]
+        ),
     )
 
     sentiment_chart = create_sentiment_pie_chart_base64(
@@ -260,6 +307,8 @@ def generate_pdf_report(summary_data: dict, output_path: str) -> None:
         commentary_text=summary_data.get("topics_commentary", "解説がありません。"),
         chart_width=180,
     )
+
+    pdf.create_wordcloud_page(pos_wc, neg_wc)
 
     topic_df = summary_data.get("topic_counts", pd.Series()).to_frame(name="Count")
     pdf.create_appendix_page(topic_df)
@@ -305,7 +354,9 @@ def create_report(
 
     # --- Sentiment chart -------------------------------------------------
     counts = (
-        df["sentiment"].value_counts().reindex(["positive", "neutral", "negative"], fill_value=0)
+        df["sentiment"]
+        .value_counts()
+        .reindex(["positive", "neutral", "negative"], fill_value=0)
     )
     chart_base64 = create_sentiment_pie_chart_base64(counts)
     if chart_base64:
@@ -318,9 +369,7 @@ def create_report(
         nlp = get_tokenizer("A")
         doc = nlp(" ".join(texts))
         return [
-            t.text
-            for t in doc
-            if t.pos_ in ["NOUN", "VERB", "ADJ"] and len(t.text) > 1
+            t.text for t in doc if t.pos_ in ["NOUN", "VERB", "ADJ"] and len(t.text) > 1
         ]
 
     if wordcloud_type == "normal":
@@ -330,21 +379,23 @@ def create_report(
         pos_wc = neg_wc = None
     else:
         pos_texts = (
-            df[df["sentiment"].isin(["positive", "neutral"])]
-            [column_name]
+            df[df["sentiment"].isin(["positive", "neutral"])][column_name]
             .dropna()
             .astype(str)
             .tolist()
         )
         neg_texts = (
-            df[df["sentiment"].isin(["negative", "neutral"])]
-            [column_name]
+            df[df["sentiment"].isin(["negative", "neutral"])][column_name]
             .dropna()
             .astype(str)
             .tolist()
         )
-        generate_wordcloud(tokenize(pos_texts), os.path.join(output_dir, "positive_wordcloud.png"))
-        generate_wordcloud(tokenize(neg_texts), os.path.join(output_dir, "negative_wordcloud.png"))
+        generate_wordcloud(
+            tokenize(pos_texts), os.path.join(output_dir, "positive_wordcloud.png")
+        )
+        generate_wordcloud(
+            tokenize(neg_texts), os.path.join(output_dir, "negative_wordcloud.png")
+        )
         pos_wc = os.path.join(output_dir, "positive_wordcloud.png")
         neg_wc = os.path.join(output_dir, "negative_wordcloud.png")
 
@@ -354,8 +405,14 @@ def create_report(
         "summary_text": positive_summary,
         "action_items": [negative_summary],
         "sentiment_counts": counts,
+        "pos_wc": pos_wc,
+        "neg_wc": neg_wc,
     }
     if chart_base64:
         summary["sentiment_commentary"] = ""
-    generate_pdf_report(summary, os.path.join(output_dir, "survey_report.pdf"))
-
+    generate_pdf_report(
+        summary,
+        os.path.join(output_dir, "survey_report.pdf"),
+        pos_wc,
+        neg_wc,
+    )
