@@ -26,12 +26,16 @@ COLOR_LIGHT_GRAY = (242, 242, 242) # #f2f2f2
 FONT_DIR = os.path.join(os.path.dirname(__file__), "fonts")
 FONT_REGULAR_PATH = os.path.join(FONT_DIR, "NotoSansJP-Regular.otf")
 FONT_BOLD_PATH = os.path.join(FONT_DIR, "NotoSansJP-Bold.otf")
+_FONT_CONFIGURED = False
 
 
 # --- Matplotlib helper ------------------------------------------------------
 
 def set_japanese_font() -> bool:
-    """Configure matplotlib to use bundled Japanese fonts."""
+    """Configure matplotlib to use bundled Japanese fonts only once."""
+    global _FONT_CONFIGURED
+    if _FONT_CONFIGURED:
+        return True
     if not os.path.exists(FONT_REGULAR_PATH):
         mpl.rcParams["axes.unicode_minus"] = False
         return False
@@ -41,6 +45,7 @@ def set_japanese_font() -> bool:
         font_name = mpl.font_manager.FontProperties(fname=FONT_REGULAR_PATH).get_name()
         mpl.rcParams["font.family"] = font_name
         mpl.rcParams["font.sans-serif"] = [font_name]
+        _FONT_CONFIGURED = True
     except Exception:
         return False
 
