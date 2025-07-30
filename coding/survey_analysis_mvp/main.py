@@ -220,7 +220,7 @@ class App(ctk.CTk):
         )
         if path:
             try:
-                generate_pdf_report(self.summary_data, path)
+                generate_pdf_report(self.summary_data, path, None, None)
                 messagebox.showinfo("成功", f"PDFレポートを {path} に保存しました。")
             except Exception as e:
                 messagebox.showerror("保存エラー", f"PDFの保存に失敗しました:\n{e}")
