@@ -19,6 +19,9 @@ import spacy
 
 from config import settings
 
+# Read API key from .env or environment variables
+openai.api_key = settings.OPENAI_API_KEY
+
 
 def analyze_survey(file_path: str, column_name: str):
     """Analyze survey responses and summarize positive/negative feedback.

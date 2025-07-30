@@ -9,7 +9,10 @@ For detailed setup and usage instructions, see [coding/survey_analysis_mvp/READM
 ### Requirements
 - **Fonts:** NotoSansJP Regular and Bold fonts are already provided under `coding/survey_analysis_mvp/fonts/`. If you wish to replace them, add TTF or OTF versions of `NotoSansJP-Regular` and `NotoSansJP-Bold` to that folder.
 - **API key:** Copy `.env.example` to `.env` and set `OPENAI_API_KEY` to your key.
-You can optionally set `MAX_CONCURRENT_TASKS` to control how many API requests run concurrently (default is 5).
+  `analysis.py` automatically assigns `openai.api_key` from this variable (or any
+  `OPENAI_API_KEY` found in your environment). You can optionally set
+  `MAX_CONCURRENT_TASKS` to control how many API requests run concurrently
+  (default is 5).
 
 ### Testing
 
