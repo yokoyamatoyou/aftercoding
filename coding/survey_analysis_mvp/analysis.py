@@ -8,6 +8,7 @@ for reporting.
 import pandas as pd
 import asyncio
 from typing import List, Literal
+from functools import lru_cache
 
 import openai
 
@@ -185,7 +186,8 @@ class ReportCommentary(BaseModel):
 
 
 # --- spaCy日本語トークナイザ ---
-def get_tokenizer(mode: str = "B"):
+@lru_cache(maxsize=3)
+def get_tokenizer(mode: str = "B") -> spacy.Language:
     """Return a spaCy pipeline with SudachiPy tokenizer.
 
     Args:
@@ -552,8 +554,11 @@ async def summarize_results(df_analyzed: pd.DataFrame, column_name: str):
     # ここでは、分析対象となった列の全テキストを結合してワードクラウドの元データとする
     # df_analyzed.columns[0]は元のExcelの最初の列名なので、分析対象列を使うべき
     # analyze_dataframeで渡されたcolumn_nameをここで使うか、df_analyzedに保存しておくべき
-    # 簡単化のため、ここではanalysis_verbatim_quoteを結合して使用
-    all_text = " ".join(df_analyzed["analysis_verbatim_quote"].dropna().astype(str))
+    # 指定された列のオリジナルテキストを使用してワードクラウドを生成
+    if column_name in df_analyzed.columns:
+        all_text = " ".join(df_analyzed[column_name].dropna().astype(str))
+    else:
+        all_text = " ".join(df_analyzed["analysis_verbatim_quote"].dropna().astype(str))
     nlp = get_tokenizer("A")
     doc = nlp(all_text)
     words_for_wordcloud = [
