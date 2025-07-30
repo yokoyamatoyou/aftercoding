@@ -13,6 +13,8 @@ import pandas as pd
 from fpdf import FPDF
 from wordcloud import WordCloud
 
+from analysis import get_tokenizer
+
 # --- Constants ---------------------------------------------------------------
 A4_WIDTH = 210
 A4_HEIGHT = 297
@@ -287,3 +289,73 @@ def generate_wordcloud(words: list[str], output_path: str) -> None:
 
     wc.to_file(output_path)
     print(f"ワードクラウドが '{output_path}' として保存されました。")
+
+
+def create_report(
+    df: pd.DataFrame,
+    positive_summary: str,
+    negative_summary: str,
+    wordcloud_type: str,
+    column_name: str,
+) -> None:
+    """Generate charts, word clouds and a PDF report from survey data."""
+
+    output_dir = os.path.join(os.path.dirname(__file__), "output")
+    os.makedirs(output_dir, exist_ok=True)
+
+    # --- Sentiment chart -------------------------------------------------
+    counts = (
+        df["sentiment"].value_counts().reindex(["positive", "neutral", "negative"], fill_value=0)
+    )
+    chart_base64 = create_sentiment_pie_chart_base64(counts)
+    if chart_base64:
+        chart_path = os.path.join(output_dir, "sentiment_chart.png")
+        with open(chart_path, "wb") as f:
+            f.write(base64.b64decode(chart_base64))
+
+    # --- Word cloud ------------------------------------------------------
+    def tokenize(texts: list[str]) -> list[str]:
+        nlp = get_tokenizer("A")
+        doc = nlp(" ".join(texts))
+        return [
+            t.text
+            for t in doc
+            if t.pos_ in ["NOUN", "VERB", "ADJ"] and len(t.text) > 1
+        ]
+
+    if wordcloud_type == "normal":
+        texts = df[column_name].dropna().astype(str).tolist()
+        words = tokenize(texts)
+        generate_wordcloud(words, os.path.join(output_dir, "wordcloud.png"))
+        pos_wc = neg_wc = None
+    else:
+        pos_texts = (
+            df[df["sentiment"].isin(["positive", "neutral"])]
+            [column_name]
+            .dropna()
+            .astype(str)
+            .tolist()
+        )
+        neg_texts = (
+            df[df["sentiment"].isin(["negative", "neutral"])]
+            [column_name]
+            .dropna()
+            .astype(str)
+            .tolist()
+        )
+        generate_wordcloud(tokenize(pos_texts), os.path.join(output_dir, "positive_wordcloud.png"))
+        generate_wordcloud(tokenize(neg_texts), os.path.join(output_dir, "negative_wordcloud.png"))
+        pos_wc = os.path.join(output_dir, "positive_wordcloud.png")
+        neg_wc = os.path.join(output_dir, "negative_wordcloud.png")
+
+    # --- PDF report ------------------------------------------------------
+    summary = {
+        "analysis_target": f"「{column_name}」列の回答",
+        "summary_text": positive_summary,
+        "action_items": [negative_summary],
+        "sentiment_counts": counts,
+    }
+    if chart_base64:
+        summary["sentiment_commentary"] = ""
+    generate_pdf_report(summary, os.path.join(output_dir, "survey_report.pdf"))
+
