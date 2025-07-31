@@ -5,7 +5,7 @@
 既存のアンケート分析・PDFレポート生成スクリプトをリファクタリングし、以下の機能改善と品質向上を実現する。
 
 * **GUIの導入**: ユーザーが直感的に操作できるGUIアプリケーションを構築する。  
-* **レイアウトの安定化**: WeasyPrint と HTML/CSS を全面的に採用し、グラフや表のレイアウト崩れを根本的に解決する。  
+* **レイアウトの安定化**: fpdf2 ベースの **ReportPDF** クラスで座標指定のレイアウトを行い、グラフや表のレイアウト崩れを根本的に解決する。
 * **機能拡張**: ワードクラウドの種類（ノーマル、ポジティブ、ネガティブ）をGUIから選択できるようにする。  
 * **モジュール化**: 各機能（UI, 分析, レポート生成）をファイルごとに分離し、メンテナンス性と再利用性を向上させる。
 
@@ -13,7 +13,7 @@
 
 * **GUI**: customtkinter (モダンな見た目のGUIを簡単に作成できる)  
 * **データ操作**: pandas  
-* **PDF生成**: WeasyPrint (HTML/CSSから高品質なPDFを生成)  
+* **PDF生成**: `ReportPDF` (fpdf2) を使用して高品質なPDFを生成
 * **HTMLテンプレート**: Jinja2  
 * **ワードクラウド**: wordcloud  
 * **グラフ描画**: matplotlib, seaborn  
@@ -22,13 +22,13 @@
 requirements.txt に以下を追加・更新してください。
 
 pandas  
-openpyxl  
-openai  
-customtkinter  
-weasyprint  
-jinja2  
-wordcloud  
-matplotlib  
+openpyxl
+openai
+customtkinter
+fpdf2
+jinja2
+wordcloud
+matplotlib
 seaborn
 
 ## **3\. 新しいファイル構成案**
@@ -123,8 +123,8 @@ customtkinter を使用して、以下の仕様でGUIアプリケーションを
          * sentiment\_chart\_path (例: output/sentiment\_chart.png)  
          * positive\_wordcloud\_path, negative\_wordcloud\_path  
          * その他、レポートに表示したい統計情報（回答総数など）  
-       * Jinja2でHTMLをレンダリングする。  
-       * WeasyPrint を使い、レンダリングされたHTML文字列と style.css を読み込んで output/survey\_report.pdf としてPDFを生成する。
+      * Jinja2でHTMLをレンダリングする。
+      * `ReportPDF` クラス (fpdf2) を使用し、レンダリングした内容を描画して output/survey\_report.pdf としてPDFを生成する。詳細は `PDFレポート指示書.md` を参照。
 
 ### **4.4. report\_template.html & style.css \- 修正・新規作成**
 
