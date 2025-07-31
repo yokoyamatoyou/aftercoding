@@ -2,6 +2,7 @@ import customtkinter as ctk
 from tkinter import filedialog, messagebox
 import pandas as pd
 import os
+import shutil
 
 from analysis import analyze_survey
 from reporting import create_report
@@ -17,6 +18,10 @@ class App(ctk.CTk):
         self.geometry("600x400")
 
         self.file_path = ""
+        self.df_analyzed = None
+        self.output_dir = os.path.join(os.path.dirname(__file__), "output")
+        self.pdf_path = None
+        self.wordcloud_file = None
 
         # file frame
         file_frame = ctk.CTkFrame(self)
@@ -59,6 +64,31 @@ class App(ctk.CTk):
         self.status = ctk.CTkLabel(run_frame, text="準備完了")
         self.status.pack()
 
+        # save frame
+        save_frame = ctk.CTkFrame(self)
+        save_frame.pack(padx=20, pady=10, fill="x")
+        self.save_excel_button = ctk.CTkButton(
+            save_frame,
+            text="分析結果をExcelに保存",
+            command=self.save_excel,
+            state="disabled",
+        )
+        self.save_excel_button.pack(side="left", padx=5, pady=5, expand=True)
+        self.save_pdf_button = ctk.CTkButton(
+            save_frame,
+            text="サマリーPDFを保存",
+            command=self.save_pdf,
+            state="disabled",
+        )
+        self.save_pdf_button.pack(side="left", padx=5, pady=5, expand=True)
+        self.save_wordcloud_button = ctk.CTkButton(
+            save_frame,
+            text="ワードクラウドを保存",
+            command=self.save_wordcloud,
+            state="disabled",
+        )
+        self.save_wordcloud_button.pack(side="left", padx=5, pady=5, expand=True)
+
     def select_file(self):
         path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
         if path:
@@ -87,13 +117,68 @@ class App(ctk.CTk):
             self.status.configure(text="レポート生成中...")
             self.update()
             create_report(df, pos_sum, neg_sum, self.wc_var.get(), column)
+            self.df_analyzed = df
+            self.pdf_path = os.path.join(self.output_dir, "survey_report.pdf")
+            if self.wc_var.get() == "normal":
+                self.wordcloud_file = os.path.join(self.output_dir, "wordcloud.png")
+            elif self.wc_var.get() == "positive":
+                self.wordcloud_file = os.path.join(self.output_dir, "positive_wordcloud.png")
+            else:
+                self.wordcloud_file = os.path.join(self.output_dir, "negative_wordcloud.png")
             self.progress.set(1)
             self.status.configure(text="完了")
+            self.save_excel_button.configure(state="normal")
+            if os.path.exists(self.pdf_path):
+                self.save_pdf_button.configure(state="normal")
+            if os.path.exists(self.wordcloud_file):
+                self.save_wordcloud_button.configure(state="normal")
             messagebox.showinfo("完了", "レポートを output フォルダに保存しました")
         except Exception as e:
             messagebox.showerror("エラー", str(e))
         finally:
             self.run_button.configure(state="normal")
+
+    def save_excel(self):
+        if self.df_analyzed is None:
+            return
+        path = filedialog.asksaveasfilename(
+            defaultextension=".xlsx",
+            filetypes=[("Excel files", "*.xlsx")],
+        )
+        if path:
+            try:
+                self.df_analyzed.to_excel(path, index=False)
+                messagebox.showinfo("成功", f"分析結果を {path} に保存しました。")
+            except Exception as e:
+                messagebox.showerror("保存エラー", f"Excelファイルの保存に失敗しました:\n{e}")
+
+    def save_pdf(self):
+        if not self.pdf_path or not os.path.exists(self.pdf_path):
+            return
+        path = filedialog.asksaveasfilename(
+            defaultextension=".pdf",
+            filetypes=[("PDF files", "*.pdf")],
+        )
+        if path:
+            try:
+                shutil.copy(self.pdf_path, path)
+                messagebox.showinfo("成功", f"PDFレポートを {path} に保存しました。")
+            except Exception as e:
+                messagebox.showerror("保存エラー", f"PDFの保存に失敗しました:\n{e}")
+
+    def save_wordcloud(self):
+        if not self.wordcloud_file or not os.path.exists(self.wordcloud_file):
+            return
+        path = filedialog.asksaveasfilename(
+            defaultextension=".png",
+            filetypes=[("PNG images", "*.png")],
+        )
+        if path:
+            try:
+                shutil.copy(self.wordcloud_file, path)
+                messagebox.showinfo("成功", f"ワードクラウドを {path} に保存しました。")
+            except Exception as e:
+                messagebox.showerror("保存エラー", f"ワードクラウドの保存に失敗しました:\n{e}")
 
 
 if __name__ == "__main__":
