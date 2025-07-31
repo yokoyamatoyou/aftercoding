@@ -8,3 +8,4 @@ ENV/
 .venv/
 # Output directories
 output/
+!coding/survey_analysis_mvp/output/
