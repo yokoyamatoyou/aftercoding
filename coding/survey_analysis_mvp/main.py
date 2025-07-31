@@ -102,6 +102,9 @@ class App(ctk.CTk):
         self.progress_bar.set(0)
         self.progress_bar.pack(pady=10, fill="x", expand=True)
 
+        self.status_label = ctk.CTkLabel(run_frame, text="準備完了")
+        self.status_label.pack(pady=5)
+
         # --- 結果保存フレーム ---
         save_frame = ctk.CTkFrame(self.main_frame)
         save_frame.pack(pady=20, padx=10, fill="x")
@@ -166,9 +169,19 @@ class App(ctk.CTk):
         self.save_pdf_button.configure(state="disabled")
         self.save_wordcloud_button.configure(state="disabled")
         self.progress_bar.set(0)
+        self.status_label.configure(text="準備完了")
 
-    def update_progress(self, value):
+    def update_progress(self, value: float) -> None:
+        """Update progress bar and status text."""
+
         self.progress_bar.set(value / 100)
+        if value <= 0:
+            status = "準備完了"
+        elif value < 100:
+            status = "分析中..."
+        else:
+            status = "レポート生成中..."
+        self.status_label.configure(text=status)
         self.update_idletasks()
 
     def run_analysis_wrapper(self):
@@ -193,11 +206,13 @@ class App(ctk.CTk):
                     progress_callback=self.update_progress,
                     max_concurrent_tasks=settings.MAX_CONCURRENT_TASKS,
                 )
+                self.update_progress(100)
                 self.summary_data, self.wordcloud_words = await summarize_results(
                     self.df_analyzed,
                     column,
                     self.wordcloud_type.get(),
                 )
+                self.status_label.configure(text="完了")
                 messagebox.showinfo("完了", "分析が完了しました。結果を保存できます。")
                 self.save_excel_button.configure(state="normal")
                 self.save_pdf_button.configure(state="normal")
