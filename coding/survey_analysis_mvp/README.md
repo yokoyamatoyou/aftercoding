@@ -54,7 +54,7 @@ pip install -r requirements.txt
 ターミナルで以下のコマンドを実行します。
 
 ```bash
-python app.py
+python main.py
 ```
 
 ## 4. 使用方法
