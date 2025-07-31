@@ -503,8 +503,18 @@ async def analyze_dataframe(
 
 
 # --- 集計関数 ---
-async def summarize_results(df_analyzed: pd.DataFrame, column_name: str):
-    """Summarize analyzed DataFrame for reporting."""
+async def summarize_results(
+    df_analyzed: pd.DataFrame,
+    column_name: str,
+    wordcloud_type: str = "normal",
+):
+    """Summarize analyzed DataFrame for reporting.
+
+    Args:
+        df_analyzed: DataFrame including analysis results.
+        column_name: Original text column used for analysis.
+        wordcloud_type: Which subset of texts to use for the word cloud.
+    """
     if "analysis_sentiment" not in df_analyzed.columns:
         return None, None
 
@@ -559,9 +569,28 @@ async def summarize_results(df_analyzed: pd.DataFrame, column_name: str):
     # analyze_dataframeで渡されたcolumn_nameをここで使うか、df_analyzedに保存しておくべき
     # 指定された列のオリジナルテキストを使用してワードクラウドを生成
     if column_name in df_analyzed.columns:
-        all_text = " ".join(df_analyzed[column_name].dropna().astype(str))
+        if wordcloud_type == "normal":
+            texts = df_analyzed[column_name].dropna().astype(str).tolist()
+        elif wordcloud_type == "positive":
+            texts = (
+                df_analyzed[df_analyzed["analysis_sentiment"].isin(["positive", "neutral"])]
+                [column_name]
+                .dropna()
+                .astype(str)
+                .tolist()
+            )
+        else:
+            texts = (
+                df_analyzed[df_analyzed["analysis_sentiment"].isin(["negative", "neutral"])]
+                [column_name]
+                .dropna()
+                .astype(str)
+                .tolist()
+            )
     else:
-        all_text = " ".join(df_analyzed["analysis_verbatim_quote"].dropna().astype(str))
+        texts = df_analyzed["analysis_verbatim_quote"].dropna().astype(str).tolist()
+
+    all_text = " ".join(texts)
     nlp = get_tokenizer("A")
     doc = nlp(all_text)
     words_for_wordcloud = [

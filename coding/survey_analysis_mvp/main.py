@@ -44,6 +44,7 @@ class App(ctk.CTk):
         self.df_analyzed = None
         self.summary_data = None
         self.wordcloud_words = None
+        self.wordcloud_type = ctk.StringVar(value="normal")
 
         # --- メインフレーム ---
         self.main_frame = ctk.CTkFrame(self)
@@ -70,6 +71,20 @@ class App(ctk.CTk):
             column_frame, state="disabled", values=[]
         )
         self.column_selector.pack(side="left", padx=10)
+
+        # --- ワードクラウドタイプ選択フレーム ---
+        wc_frame = ctk.CTkFrame(self.main_frame)
+        wc_frame.pack(pady=10, padx=10, fill="x")
+        ctk.CTkLabel(wc_frame, text="ワードクラウドの種類:").pack(side="left", padx=10)
+        ctk.CTkRadioButton(
+            wc_frame, text="ノーマル", variable=self.wordcloud_type, value="normal"
+        ).pack(side="left", padx=5)
+        ctk.CTkRadioButton(
+            wc_frame, text="ポジティブ", variable=self.wordcloud_type, value="positive"
+        ).pack(side="left", padx=5)
+        ctk.CTkRadioButton(
+            wc_frame, text="ネガティブ", variable=self.wordcloud_type, value="negative"
+        ).pack(side="left", padx=5)
 
         # --- 実行フレーム ---
         run_frame = ctk.CTkFrame(self.main_frame)
@@ -179,7 +194,9 @@ class App(ctk.CTk):
                     max_concurrent_tasks=settings.MAX_CONCURRENT_TASKS,
                 )
                 self.summary_data, self.wordcloud_words = await summarize_results(
-                    self.df_analyzed, column
+                    self.df_analyzed,
+                    column,
+                    self.wordcloud_type.get(),
                 )
                 messagebox.showinfo("完了", "分析が完了しました。結果を保存できます。")
                 self.save_excel_button.configure(state="normal")
