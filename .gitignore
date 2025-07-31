@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+# Virtual environments
+venv/
+.env/
+ENV/
+.env
+.venv/
+# Output directories
+output/
