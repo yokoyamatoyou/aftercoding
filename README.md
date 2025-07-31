@@ -42,6 +42,15 @@ python scripts/compile_all.py
 This script gathers all `*.py` files using `pathlib` and compiles each one with
 `py_compile`, ensuring paths with Japanese characters are handled reliably.
 
+To run the unit tests, install the dependencies listed under
+`coding/survey_analysis_mvp/requirements.txt` and execute `pytest` from the
+repository root:
+
+```bash
+pip install -r coding/survey_analysis_mvp/requirements.txt
+pytest
+```
+
 ### Repository notes
 
 The repository root contains a `.gitignore` configured to exclude Python bytecode,
