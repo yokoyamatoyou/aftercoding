@@ -2,7 +2,13 @@
 
 This repository contains a prototype survey analysis tool that processes Japanese free-text responses.
 It leverages spaCy with SudachiPy and OpenAI's models to summarize sentiment, topics and actionable insights from Excel files.
-Results can be exported to Excel, PDF reports and word-cloud images.
+Results can be exported to Excel, PDF reports and word‑cloud images.  The PDF
+reports are created using **fpdf2** via the `ReportPDF` class and include graphs
+rendered with Matplotlib.
+
+The analysis pipeline makes extensive use of **asyncio** and `AsyncOpenAI` so
+multiple API calls can run concurrently.  You can control the concurrency level
+with the `MAX_CONCURRENT_TASKS` setting.
 
 For detailed setup and usage instructions, see [coding/survey_analysis_mvp/README.md](coding/survey_analysis_mvp/README.md).
 
@@ -14,10 +20,20 @@ For detailed setup and usage instructions, see [coding/survey_analysis_mvp/READM
   `MAX_CONCURRENT_TASKS` to control how many API requests run concurrently
   (default is 5).
 
+### Running the application
+
+Launch the GUI with:
+
+```bash
+python coding/survey_analysis_mvp/main.py
+```
+
+Windows users can also double‑click `start_app.bat` which runs the same command.
+
 ### Testing
 
-To verify that all Python modules are syntactically correct even when file paths
-contain non-ASCII characters, run:
+An optional check is available to ensure all Python modules compile correctly,
+even if file paths include non‑ASCII characters.  Run:
 
 ```bash
 python scripts/compile_all.py
