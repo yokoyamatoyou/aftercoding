@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import io
 import os
+import asyncio
 from datetime import datetime
 
 import matplotlib as mpl
@@ -13,7 +14,11 @@ import pandas as pd
 from fpdf import FPDF
 from wordcloud import WordCloud
 
-from analysis import get_tokenizer
+from analysis import (
+    get_tokenizer,
+    ReportCommentary,
+    generate_report_commentary,
+)
 
 # --- Constants ---------------------------------------------------------------
 A4_WIDTH = 210
@@ -346,8 +351,15 @@ def create_report(
     negative_summary: str,
     wordcloud_type: str,
     column_name: str,
+    commentary: ReportCommentary | None = None,
 ) -> None:
-    """Generate charts, word clouds and a PDF report from survey data."""
+    """Generate charts, word clouds and a PDF report from survey data.
+
+    If ``commentary`` is provided it overrides the ``summary_text`` and
+    ``action_items`` derived from the separate summaries. When both summaries are
+    empty and no commentary is given, commentary is generated automatically using
+    :func:`generate_report_commentary`.
+    """
 
     output_dir = os.path.join(os.path.dirname(__file__), "output")
     os.makedirs(output_dir, exist_ok=True)
@@ -400,25 +412,55 @@ def create_report(
         neg_wc = os.path.join(output_dir, "negative_wordcloud.png")
 
     # --- PDF report ------------------------------------------------------
-    # Combine positive and negative summaries for the overall summary text
-    summary_text = "\n\n".join(
-        s.strip() for s in [positive_summary, negative_summary] if s.strip()
-    )
+    # Aggregate topic counts for optional commentary generation
+    all_topics: list[str] = []
+    if "analysis_key_topics" in df.columns:
+        for topics in df["analysis_key_topics"]:
+            if isinstance(topics, list):
+                all_topics.extend(topics)
+    topic_counts = pd.Series(all_topics).value_counts()
 
-    # Derive action items from the negative summary lines
-    action_items = [
-        line.strip("・- ") for line in negative_summary.splitlines() if line.strip()
-    ]
+    if commentary is None and not (positive_summary.strip() or negative_summary.strip()):
+        try:
+            commentary = asyncio.run(
+                generate_report_commentary(
+                    {
+                        "sentiment_counts": counts,
+                        "topic_counts": topic_counts.head(15),
+                    }
+                )
+            )
+        except Exception:
+            commentary = None
+
+    if commentary is not None:
+        summary_text = commentary.summary_text
+        action_items = commentary.action_items
+        sentiment_commentary = commentary.sentiment_commentary
+        topics_commentary = commentary.topics_commentary
+    else:
+        summary_text = "\n\n".join(
+            s.strip() for s in [positive_summary, negative_summary] if s.strip()
+        )
+        action_items = [
+            line.strip("・- ") for line in negative_summary.splitlines() if line.strip()
+        ]
+        sentiment_commentary = ""
+        topics_commentary = ""
 
     summary = {
         "analysis_target": f"「{column_name}」列の回答",
         "summary_text": summary_text,
         "action_items": action_items or ["アクションアイテムがありません。"],
         "sentiment_counts": counts,
+        "topic_counts": topic_counts.head(15),
         "pos_wc": pos_wc,
         "neg_wc": neg_wc,
     }
-    if chart_base64:
+    if commentary is not None:
+        summary["sentiment_commentary"] = sentiment_commentary
+        summary["topics_commentary"] = topics_commentary
+    elif chart_base64:
         summary["sentiment_commentary"] = ""
     generate_pdf_report(
         summary,
