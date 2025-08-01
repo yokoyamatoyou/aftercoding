@@ -50,15 +50,19 @@
         {{ topic_table|safe }}
     </div>
 
+    {% if moderation_chart_base64 %}
     <h2>モデレーション結果</h2>
     <div class="chart-container">
       <img src="data:image/png;base64,{{ moderation_chart_base64 }}" alt="モデレーション結果グラフ" />
     </div>
+    {% endif %}
 
+    {% if emotion_chart_base64 %}
     <h2>感情スコア平均</h2>
     <div class="chart-container">
       <img src="data:image/png;base64,{{ emotion_chart_base64 }}" alt="感情スコア平均グラフ" />
     </div>
+    {% endif %}
 
   </div>
   <footer></footer>

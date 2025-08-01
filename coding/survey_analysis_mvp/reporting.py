@@ -5,13 +5,15 @@ from __future__ import annotations
 import base64
 import io
 import os
+import re
 import asyncio
 from datetime import datetime
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
-from fpdf import FPDF
+from fpdf import FPDF, HTMLMixin
+from jinja2 import Environment, FileSystemLoader
 from wordcloud import WordCloud
 
 from analysis import (
@@ -270,56 +272,75 @@ def generate_pdf_report(
     pos_wc: str | None = None,
     neg_wc: str | None = None,
 ) -> None:
-    """Generate a multi-page PDF report from analysis results.
+    """Render ``report_template.html`` with Jinja2 and output as PDF.
+
+    The ``summary_data`` dictionary is expected to contain the raw data used to
+    populate the report such as ``sentiment_counts`` and ``topic_counts``.  This
+    function converts the relevant charts to Base64 images, injects them into the
+    HTML template and writes the result using ``FPDF``'s ``HTMLMixin``.
 
     Args:
-        summary_data: Dictionary containing chart data and commentary.
+        summary_data: Data for the template, including count series.
         output_path: Destination PDF file path.
         pos_wc: Path to the positive word cloud image.
         neg_wc: Path to the negative word cloud image.
     """
-    pdf = ReportPDF()
-    pdf.setup_fonts()
-    pdf.set_auto_page_break(auto=True, margin=15)
 
-    pdf.create_cover_page(
-        analysis_target=summary_data.get("analysis_target", "アンケート回答")
-    )
-
-    pdf.create_summary_page(
-        summary_text=summary_data.get("summary_text", "総括テキストがありません。"),
-        action_items=summary_data.get(
-            "action_items", ["アクションアイテムがありません。"]
-        ),
-    )
-
-    sentiment_chart = create_sentiment_pie_chart_base64(
+    sentiment_b64 = create_sentiment_pie_chart_base64(
         summary_data.get("sentiment_counts", pd.Series())
     )
-    pdf.create_chart_commentary_page(
-        title="分析詳細①：全体感情分析",
-        chart_base64=sentiment_chart,
-        commentary_text=summary_data.get("sentiment_commentary", "解説がありません。"),
-        chart_width=120,
-    )
-
-    topics_chart = create_topics_bar_chart_base64(
+    topics_b64 = create_topics_bar_chart_base64(
         summary_data.get("topic_counts", pd.Series())
     )
-    pdf.create_chart_commentary_page(
-        title="分析詳細②：主要トピック",
-        chart_base64=topics_chart,
-        commentary_text=summary_data.get("topics_commentary", "解説がありません。"),
-        chart_width=180,
+    moderation_b64 = create_moderation_bar_chart_base64(
+        summary_data.get("moderation_summary", {})
     )
 
-    pdf.create_wordcloud_page(pos_wc, neg_wc)
+    img_dir = os.path.dirname(output_path)
+    os.makedirs(img_dir, exist_ok=True)
+    sentiment_chart_path = ""
+    topics_chart_path = ""
+    if sentiment_b64:
+        sentiment_chart_path = os.path.join(img_dir, "sentiment_chart.png")
+        with open(sentiment_chart_path, "wb") as f:
+            f.write(base64.b64decode(sentiment_b64))
+    if topics_b64:
+        topics_chart_path = os.path.join(img_dir, "topics_chart.png")
+        with open(topics_chart_path, "wb") as f:
+            f.write(base64.b64decode(topics_b64))
 
-    topic_df = summary_data.get("topic_counts", pd.Series()).to_frame(name="Count")
-    pdf.create_appendix_page(topic_df)
+    env = Environment(loader=FileSystemLoader(os.path.dirname(__file__)))
+    template = env.get_template("report_template.html")
+    html_out = template.render(
+        positive_summary=summary_data.get("positive_summary", ""),
+        negative_summary=summary_data.get("negative_summary", ""),
+        sentiment_chart_path=sentiment_chart_path,
+        positive_wordcloud_path=pos_wc or "",
+        negative_wordcloud_path=neg_wc or "",
+        wordcloud_path=summary_data.get("wordcloud_path", ""),
+        topic_table=summary_data.get("topic_table", ""),
+        moderation_chart_base64=moderation_b64,
+        emotion_chart_base64=summary_data.get("emotion_chart_base64", ""),
+    )
 
+    body_match = re.search(r"<body[^>]*>(.*)</body>", html_out, flags=re.S | re.I)
+    html_body = body_match.group(1) if body_match else html_out
+
+    class PDF(FPDF, HTMLMixin):
+        pass
+
+    if not (os.path.exists(FONT_REGULAR_PATH) and os.path.exists(FONT_BOLD_PATH)):
+        raise FileNotFoundError(
+            "NotoSansJPフォントファイルが見つかりません。fontsディレクトリを確認してください。"
+        )
+
+    pdf = PDF()
+    pdf.add_page()
+    pdf.add_font("NotoSansJP", "", FONT_REGULAR_PATH, uni=True)
+    pdf.add_font("NotoSansJP", "B", FONT_BOLD_PATH, uni=True)
+    pdf.set_font("NotoSansJP", "", 12)
+    pdf.write_html(html_body)
     pdf.output(output_path)
-    print(f"新しいデザインのPDFレポートが '{output_path}' として生成されました。")
 
 
 def generate_wordcloud(words: list[str], output_path: str) -> None:
@@ -420,7 +441,9 @@ def create_report(
                 all_topics.extend(topics)
     topic_counts = pd.Series(all_topics).value_counts()
 
-    if commentary is None and not (positive_summary.strip() or negative_summary.strip()):
+    if commentary is None and not (
+        positive_summary.strip() or negative_summary.strip()
+    ):
         try:
             commentary = asyncio.run(
                 generate_report_commentary(
