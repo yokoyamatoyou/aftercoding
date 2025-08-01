@@ -14,3 +14,7 @@
 
 ## 2025-08-02
 - Added tests for PDF report generation and analyze_dataframe.
+
+## 2025-08-02
+- Implemented Jinja2-based `generate_pdf_report` using HTMLMixin.
+- Ran compile_all and pytest successfully.
