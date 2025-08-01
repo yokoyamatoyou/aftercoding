@@ -23,58 +23,86 @@ from config import settings
 openai.api_key = settings.OPENAI_API_KEY
 
 
-def analyze_survey(file_path: str, column_name: str):
-    """Analyze survey responses and summarize positive/negative feedback.
+async def analyze_survey(
+    file_path: str,
+    column_name: str,
+    progress_callback=None,
+    max_concurrent_tasks: int | None = None,
+) -> tuple[pd.DataFrame, str, str]:
+    """Analyze survey responses asynchronously and summarize feedback.
 
     Args:
         file_path: Path to the Excel file.
         column_name: Column containing free text responses.
+        progress_callback: Optional callback receiving completion percentage.
+        max_concurrent_tasks: Maximum number of concurrent API calls.
 
     Returns:
         Tuple of (DataFrame with sentiment column, positive summary text,
         negative summary text).
     """
+
     df = pd.read_excel(file_path)
-    texts = df[column_name].fillna("").astype(str)
-    sentiments = []
+    texts = df[column_name].fillna("").astype(str).tolist()
+
+    if max_concurrent_tasks is None:
+        max_concurrent_tasks = settings.MAX_CONCURRENT_TASKS
+
+    client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+
+    sentiments = ["neutral"] * len(texts)
 
     system_prompt = (
         "あなたはテキスト分析の専門家です。与えられたテキストを"
         "ポジティブ、ネガティブ、ニュートラルのいずれか一つに分類してください。"
     )
 
-    for text in texts:
-        if not text.strip():
-            sentiments.append("neutral")
-            continue
-        try:
-            response = openai.ChatCompletion.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": text},
-                ],
-            )
-            sentiment = response.choices[0].message.content.strip().lower()
-        except Exception:
-            sentiment = "neutral"
-        sentiments.append(sentiment)
+    semaphore = asyncio.Semaphore(max_concurrent_tasks)
+
+    async def classify(idx: int, text: str):
+        async with semaphore:
+            if not text.strip():
+                return idx, "neutral"
+            try:
+                resp = await client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": text},
+                    ],
+                )
+                sentiment = resp.choices[0].message.content.strip().lower()
+            except Exception:
+                sentiment = "neutral"
+            return idx, sentiment
+
+    tasks = [asyncio.create_task(classify(i, t)) for i, t in enumerate(texts)]
+
+    total = len(tasks)
+    finished = 0
+
+    for coro in asyncio.as_completed(tasks):
+        idx, sent = await coro
+        sentiments[idx] = sent
+        finished += 1
+        if progress_callback:
+            progress_callback(finished / total * 100)
 
     df["sentiment"] = sentiments
 
     positive_texts = df.loc[df["sentiment"] == "positive", column_name].tolist()
     negative_texts = df.loc[df["sentiment"] == "negative", column_name].tolist()
 
-    def summarize(text_list):
+    async def summarize(text_list: list[str]):
         if not text_list:
             return ""
         prompt = (
             "以下の意見リストは、製品アンケートの回答です。マーケティング担当者が"
-            "傾向を把握できるよう、重要なポイントを3つにまとめてください。\n\n" +
-            "\n".join(text_list)
+            "傾向を把握できるよう、重要なポイントを3つにまとめてください。\n\n"
+            + "\n".join(text_list)
         )
         try:
-            res = openai.ChatCompletion.create(
+            res = await client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -82,8 +110,10 @@ def analyze_survey(file_path: str, column_name: str):
         except Exception:
             return ""
 
-    positive_summary = summarize(positive_texts)
-    negative_summary = summarize(negative_texts)
+    pos_task = asyncio.create_task(summarize(positive_texts))
+    neg_task = asyncio.create_task(summarize(negative_texts))
+
+    positive_summary, negative_summary = await asyncio.gather(pos_task, neg_task)
 
     return df, positive_summary, negative_summary
 
