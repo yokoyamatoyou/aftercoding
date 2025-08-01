@@ -182,8 +182,6 @@ class App(ctk.CTk):
             status = "準備完了"
         elif value < 100:
             status = "分析中..."
-        elif value == 100:
-            status = "レポート生成中..."
         else:
             status = "完了"
         self.status_label.configure(text=status)
@@ -217,7 +215,7 @@ class App(ctk.CTk):
                     column,
                     self.wordcloud_type.get(),
                 )
-                self.update_progress(101)
+                self.update_progress(100)
                 messagebox.showinfo("完了", "分析が完了しました。結果を保存できます。")
                 self.save_excel_button.configure(state="normal")
                 self.save_pdf_button.configure(state="normal")
