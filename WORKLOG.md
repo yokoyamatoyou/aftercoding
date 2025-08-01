@@ -7,3 +7,7 @@
 ## 2025-08-01
 - Confirmed dependencies installed.
 - Verified compile_all and pytest succeed again.
+
+## 2025-08-01
+- Re-installed dependencies.
+- compile_all and pytest successful.
