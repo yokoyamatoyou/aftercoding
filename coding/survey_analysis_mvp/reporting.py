@@ -400,10 +400,20 @@ def create_report(
         neg_wc = os.path.join(output_dir, "negative_wordcloud.png")
 
     # --- PDF report ------------------------------------------------------
+    # Combine positive and negative summaries for the overall summary text
+    summary_text = "\n\n".join(
+        s.strip() for s in [positive_summary, negative_summary] if s.strip()
+    )
+
+    # Derive action items from the negative summary lines
+    action_items = [
+        line.strip("・- ") for line in negative_summary.splitlines() if line.strip()
+    ]
+
     summary = {
         "analysis_target": f"「{column_name}」列の回答",
-        "summary_text": positive_summary,
-        "action_items": [negative_summary],
+        "summary_text": summary_text,
+        "action_items": action_items or ["アクションアイテムがありません。"],
         "sentiment_counts": counts,
         "pos_wc": pos_wc,
         "neg_wc": neg_wc,
