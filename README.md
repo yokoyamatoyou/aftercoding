@@ -30,6 +30,13 @@ python coding/survey_analysis_mvp/main.py
 
 Windows users can also double‑click `start_app.bat` which runs the same command.
 
+### Programmatic usage
+
+For automated processing you can call `analysis.analyze_dataframe` directly. It
+accepts a `pandas.DataFrame` and the column name to analyze, returning the
+original data combined with structured results. The previous `analyze_survey`
+helper has been removed.
+
 ### Testing
 
 An optional check is available to ensure all Python modules compile correctly,
