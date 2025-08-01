@@ -11,3 +11,6 @@
 ## 2025-08-01
 - Re-installed dependencies.
 - compile_all and pytest successful.
+
+## 2025-08-02
+- Added tests for PDF report generation and analyze_dataframe.
