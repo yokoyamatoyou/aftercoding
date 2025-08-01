@@ -3,6 +3,8 @@ import customtkinter as ctk
 import pandas as pd
 import asyncio
 import os
+import threading
+import queue
 
 # プロジェクトのルートをsys.pathに追加
 import sys
@@ -45,6 +47,8 @@ class App(ctk.CTk):
         self.summary_data = None
         self.wordcloud_words = None
         self.wordcloud_type = ctk.StringVar(value="normal")
+        self.analysis_queue = queue.Queue()
+        self.check_queue()
 
         # --- メインフレーム ---
         self.main_frame = ctk.CTkFrame(self)
@@ -187,6 +191,31 @@ class App(ctk.CTk):
         self.status_label.configure(text=status)
         self.update_idletasks()
 
+    def check_queue(self):
+        """Monitor background thread messages for GUI updates."""
+        try:
+            message = self.analysis_queue.get_nowait()
+            if isinstance(message, float):
+                self.update_progress(message)
+            elif isinstance(message, dict) and "summary" in message:
+                self.df_analyzed = message["df_analyzed"]
+                self.summary_data = message["summary"]
+                self.wordcloud_words = message["wordcloud_words"]
+                messagebox.showinfo("完了", "分析が完了しました。結果を保存できます。")
+                self.save_excel_button.configure(state="normal")
+                self.save_pdf_button.configure(state="normal")
+                self.save_wordcloud_button.configure(state="normal")
+                self.run_button.configure(state="normal")
+                self.load_button.configure(state="normal")
+            elif isinstance(message, str) and message.startswith("ERROR"):
+                messagebox.showerror("分析エラー", message)
+                self.run_button.configure(state="normal")
+                self.load_button.configure(state="normal")
+        except queue.Empty:
+            pass
+        finally:
+            self.after(100, self.check_queue)
+
     def run_analysis_wrapper(self):
         if self.df is None:
             messagebox.showerror("エラー", "ファイルが選択されていません。")
@@ -201,32 +230,42 @@ class App(ctk.CTk):
         self.run_button.configure(state="disabled")
         self.load_button.configure(state="disabled")
 
+        thread = threading.Thread(
+            target=self.run_analysis_in_background, args=(column,)
+        )
+        thread.daemon = True
+        thread.start()
+
+    def run_analysis_in_background(self, column: str):
+        """Execute analysis asynchronously inside a worker thread."""
+
+        def progress_callback_for_thread(value: float):
+            self.analysis_queue.put(value)
+
         async def run():
             try:
-                self.df_analyzed = await analyze_dataframe(
+                df_analyzed = await analyze_dataframe(
                     self.df,
                     column,
-                    progress_callback=self.update_progress,
+                    progress_callback=progress_callback_for_thread,
                     max_concurrent_tasks=settings.MAX_CONCURRENT_TASKS,
                 )
-                self.update_progress(100)
-                self.summary_data, self.wordcloud_words = await summarize_results(
-                    self.df_analyzed,
+                progress_callback_for_thread(100.0)
+
+                summary_data, wordcloud_words = await summarize_results(
+                    df_analyzed,
                     column,
                     self.wordcloud_type.get(),
                 )
-                self.update_progress(100)
-                messagebox.showinfo("完了", "分析が完了しました。結果を保存できます。")
-                self.save_excel_button.configure(state="normal")
-                self.save_pdf_button.configure(state="normal")
-                self.save_wordcloud_button.configure(state="normal")
-            except Exception as e:
-                messagebox.showerror(
-                    "分析エラー", f"分析中にエラーが発生しました:\n{e}"
+                self.analysis_queue.put(
+                    {
+                        "df_analyzed": df_analyzed,
+                        "summary": summary_data,
+                        "wordcloud_words": wordcloud_words,
+                    }
                 )
-            finally:
-                self.run_button.configure(state="normal")
-                self.load_button.configure(state="normal")
+            except Exception as e:
+                self.analysis_queue.put(f"ERROR: 分析中にエラーが発生しました:\n{e}")
 
         asyncio.run(run())
 
